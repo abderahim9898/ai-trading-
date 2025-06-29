@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getSchools } from '../services/firestore';
+import { getSchools, getDoc, doc } from '../services/firestore';
 import { generateTradingSignalWithRealData } from '../services/gpt';
 import { fetchMultiTimeframeData, generateMockMultiTimeframeData, TRADING_PAIRS, testApiConnection } from '../services/marketData';
 import { saveRecommendation, incrementUserUsage } from '../services/firestore';
+import { sendTelegramMessage, formatSignalForTelegram } from '../services/telegram';
+import { db } from '../config/firebase';
 import { School } from '../types';
+import AnalysisDisplay from '../components/AnalysisDisplay';
 import { 
   TrendingUp, 
   Zap, 
@@ -45,11 +48,15 @@ const Dashboard: React.FC = () => {
   const [marketData, setMarketData] = useState<any>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [apiStatus, setApiStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
+  const [telegramConfig, setTelegramConfig] = useState<any>(null);
 
   useEffect(() => {
     loadSchools();
     checkApiConnection();
-  }, []);
+    if (user?.plan === 'elite') {
+      loadTelegramConfig();
+    }
+  }, [user]);
 
   const loadSchools = async () => {
     try {
@@ -60,6 +67,25 @@ const Dashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Error loading schools:', error);
+    }
+  };
+
+  const loadTelegramConfig = async () => {
+    if (!user) return;
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.telegram && userData.telegram.enabled) {
+          setTelegramConfig({
+            botToken: userData.telegram.botToken,
+            chatId: userData.telegram.chatId
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading Telegram config:', error);
     }
   };
 
@@ -162,6 +188,18 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleSendToTelegram = async (message: string) => {
+    if (!telegramConfig || !user || user.plan !== 'elite') {
+      throw new Error('Telegram not configured or not available for your plan');
+    }
+
+    try {
+      await sendTelegramMessage(telegramConfig, message);
+    } catch (error: any) {
+      throw new Error(`Failed to send to Telegram: ${error.message}`);
+    }
+  };
+
   const getPlanColor = (plan: string) => {
     switch (plan) {
       case 'free': return 'text-gray-400';
@@ -176,18 +214,6 @@ const Dashboard: React.FC = () => {
       case 'elite': return <Crown className="h-5 w-5" />;
       default: return <Zap className="h-5 w-5" />;
     }
-  };
-
-  const getSignalTypeIcon = (text: string) => {
-    const lowerText = text.toLowerCase();
-    if (lowerText.includes('buy') || lowerText.includes('long')) {
-      return <TrendingUp className="h-4 w-4 text-green-400" />;
-    } else if (lowerText.includes('sell') || lowerText.includes('short')) {
-      return <TrendingDown className="h-4 w-4 text-red-400" />;
-    } else if (lowerText.includes('hold') || lowerText.includes('wait')) {
-      return <Minus className="h-4 w-4 text-yellow-400" />;
-    }
-    return <Target className="h-4 w-4 text-blue-400" />;
   };
 
   const getApiStatusIcon = () => {
@@ -467,79 +493,6 @@ const Dashboard: React.FC = () => {
                     )}
                   </button>
                 </div>
-
-                {/* Latest Signal Display */}
-                {lastSignal && (
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 sm:p-6">
-                    <div className="flex items-center space-x-2 mb-4">
-                      {getSignalTypeIcon(lastSignal.type)}
-                      <h3 className="text-lg font-semibold text-blue-400">
-                        {t('signal.latestSignal')} - {lastSignal.pair}
-                      </h3>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
-                      <div className="bg-black/20 rounded-lg p-3">
-                        <p className="text-gray-400 text-xs">Type</p>
-                        <p className={`font-bold uppercase text-sm ${
-                          lastSignal.type === 'buy' ? 'text-green-400' : 
-                          lastSignal.type === 'sell' ? 'text-red-400' : 'text-yellow-400'
-                        }`}>
-                          {t(`signal.type.${lastSignal.type}`)}
-                        </p>
-                      </div>
-                      
-                      {lastSignal.entry && (
-                        <div className="bg-black/20 rounded-lg p-3">
-                          <p className="text-gray-400 text-xs">{t('signal.entry')}</p>
-                          <p className="text-white font-bold text-sm">{lastSignal.entry}</p>
-                        </div>
-                      )}
-                      
-                      {lastSignal.stopLoss && (
-                        <div className="bg-black/20 rounded-lg p-3">
-                          <p className="text-gray-400 text-xs">{t('signal.stopLoss')}</p>
-                          <p className="text-red-400 font-bold text-sm">{lastSignal.stopLoss}</p>
-                        </div>
-                      )}
-                      
-                      {lastSignal.takeProfit1 && (
-                        <div className="bg-black/20 rounded-lg p-3">
-                          <p className="text-gray-400 text-xs">{t('signal.takeProfit1')}</p>
-                          <p className="text-green-400 font-bold text-sm">{lastSignal.takeProfit1}</p>
-                        </div>
-                      )}
-                      
-                      {lastSignal.takeProfit2 && (
-                        <div className="bg-black/20 rounded-lg p-3">
-                          <p className="text-gray-400 text-xs">{t('signal.takeProfit2')}</p>
-                          <p className="text-green-400 font-bold text-sm">{lastSignal.takeProfit2}</p>
-                        </div>
-                      )}
-                      
-                      {lastSignal.probability && (
-                        <div className="bg-black/20 rounded-lg p-3">
-                          <p className="text-gray-400 text-xs">{t('signal.probability')}</p>
-                          <p className="text-blue-400 font-bold text-sm">{lastSignal.probability}%</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {lastRecommendation && (
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 sm:p-6">
-                    <div className="flex items-center space-x-2 mb-3">
-                      {getSignalTypeIcon(lastRecommendation)}
-                      <h3 className="text-lg font-semibold text-green-400">
-                        {t('signal.fullAnalysis')}
-                      </h3>
-                    </div>
-                    <div className="text-gray-300 whitespace-pre-wrap text-sm leading-relaxed">
-                      {lastRecommendation}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -598,6 +551,14 @@ const Dashboard: React.FC = () => {
                     {apiStatus === 'connected' ? t('stats.live') : t('stats.demo')}
                   </span>
                 </div>
+                {user.plan === 'elite' && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-300">Telegram:</span>
+                    <span className={`font-semibold ${telegramConfig ? 'text-green-400' : 'text-gray-400'}`}>
+                      {telegramConfig ? 'Configured' : 'Not Set'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -633,6 +594,19 @@ const Dashboard: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Analysis Display */}
+        {(lastRecommendation || lastSignal) && (
+          <div className="mt-8">
+            <AnalysisDisplay
+              analysis={lastRecommendation}
+              signal={lastSignal}
+              school={schools.find(s => s.id === selectedSchool)?.name || 'Unknown'}
+              timestamp={new Date()}
+              onSendToTelegram={user?.plan === 'elite' && telegramConfig ? handleSendToTelegram : undefined}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

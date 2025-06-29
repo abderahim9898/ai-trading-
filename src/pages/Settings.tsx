@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { updateUserPassword } from '../services/auth';
-import { updateDoc, doc } from 'firebase/firestore';
+import { updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
+import { 
+  testTelegramConfig, 
+  getTelegramBotInfo, 
+  getTelegramChatInfo,
+  getTelegramSetupInstructions 
+} from '../services/telegram';
 import { 
   User, 
   Lock, 
@@ -25,7 +31,14 @@ import {
   Phone,
   Calendar,
   Activity,
-  BarChart3
+  BarChart3,
+  Send,
+  MessageSquare,
+  Bot,
+  TestTube,
+  ExternalLink,
+  Info,
+  ChevronDown
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
@@ -55,12 +68,55 @@ const Settings: React.FC = () => {
   const [dataSharing, setDataSharing] = useState(false);
   const [analyticsTracking, setAnalyticsTracking] = useState(true);
 
+  // Telegram settings (Elite only)
+  const [telegramBotToken, setTelegramBotToken] = useState('');
+  const [telegramChatId, setTelegramChatId] = useState('');
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
+  const [telegramTesting, setTelegramTesting] = useState(false);
+  const [telegramTestResult, setTelegramTestResult] = useState<'success' | 'error' | null>(null);
+  const [showTelegramInstructions, setShowTelegramInstructions] = useState(false);
+
   useEffect(() => {
     if (user) {
       setDisplayName(user.displayName || '');
       setEmail(user.email || '');
+      loadUserSettings();
     }
   }, [user]);
+
+  const loadUserSettings = async () => {
+    if (!user) return;
+
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        
+        // Load notification settings
+        if (userData.notifications) {
+          setEmailNotifications(userData.notifications.email ?? true);
+          setPushNotifications(userData.notifications.push ?? true);
+          setTradingAlerts(userData.notifications.tradingAlerts ?? true);
+          setWeeklyReports(userData.notifications.weeklyReports ?? true);
+        }
+        
+        // Load privacy settings
+        if (userData.privacy) {
+          setDataSharing(userData.privacy.dataSharing ?? false);
+          setAnalyticsTracking(userData.privacy.analyticsTracking ?? true);
+        }
+        
+        // Load Telegram settings (Elite only)
+        if (userData.telegram && user.plan === 'elite') {
+          setTelegramBotToken(userData.telegram.botToken || '');
+          setTelegramChatId(userData.telegram.chatId || '');
+          setTelegramEnabled(userData.telegram.enabled ?? false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user settings:', error);
+    }
+  };
 
   const clearMessages = () => {
     setSuccess('');
@@ -163,6 +219,61 @@ const Settings: React.FC = () => {
     }
   };
 
+  const handleTelegramTest = async () => {
+    if (!telegramBotToken || !telegramChatId) {
+      setError('Please enter both bot token and chat ID');
+      return;
+    }
+
+    setTelegramTesting(true);
+    setTelegramTestResult(null);
+    clearMessages();
+
+    try {
+      // Test the configuration
+      const success = await testTelegramConfig({
+        botToken: telegramBotToken,
+        chatId: telegramChatId
+      });
+
+      if (success) {
+        setTelegramTestResult('success');
+        setSuccess('Telegram test message sent successfully!');
+      } else {
+        throw new Error('Test failed');
+      }
+    } catch (error: any) {
+      setTelegramTestResult('error');
+      setError(`Telegram test failed: ${error.message}`);
+    } finally {
+      setTelegramTesting(false);
+    }
+  };
+
+  const handleTelegramUpdate = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    clearMessages();
+
+    try {
+      await updateDoc(doc(db, 'users', user.uid), {
+        telegram: {
+          botToken: telegramBotToken,
+          chatId: telegramChatId,
+          enabled: telegramEnabled,
+          updatedAt: new Date().toISOString()
+        }
+      });
+
+      setSuccess('Telegram settings updated!');
+    } catch (error: any) {
+      setError(error.message || 'Failed to update Telegram settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const exportUserData = () => {
     if (!user) return;
 
@@ -187,7 +298,11 @@ const Settings: React.FC = () => {
         privacy: {
           dataSharing,
           analyticsTracking
-        }
+        },
+        telegram: user.plan === 'elite' ? {
+          enabled: telegramEnabled,
+          configured: !!(telegramBotToken && telegramChatId)
+        } : null
       }
     };
 
@@ -224,9 +339,12 @@ const Settings: React.FC = () => {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'telegram', label: 'Telegram', icon: Send, eliteOnly: true },
     { id: 'privacy', label: 'Privacy', icon: Shield },
     { id: 'subscription', label: 'Subscription', icon: CreditCard }
   ];
+
+  const telegramInstructions = getTelegramSetupInstructions();
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
@@ -263,20 +381,29 @@ const Settings: React.FC = () => {
           <div className="lg:col-span-1">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-6">
               <div className="space-y-2">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all ${
-                      activeTab === tab.id
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    <tab.icon className="h-5 w-5" />
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
+                {tabs.map((tab) => {
+                  const isEliteOnly = tab.eliteOnly && user.plan !== 'elite';
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => !isEliteOnly && setActiveTab(tab.id)}
+                      disabled={isEliteOnly}
+                      className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg font-medium transition-all ${
+                        activeTab === tab.id
+                          ? 'bg-blue-600 text-white'
+                          : isEliteOnly
+                          ? 'text-gray-500 cursor-not-allowed'
+                          : 'text-gray-300 hover:text-white hover:bg-white/10'
+                      }`}
+                    >
+                      <tab.icon className="h-5 w-5" />
+                      <span>{tab.label}</span>
+                      {tab.eliteOnly && (
+                        <Crown className="h-4 w-4 text-purple-400 ml-auto" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -523,6 +650,173 @@ const Settings: React.FC = () => {
                 </div>
               )}
 
+              {activeTab === 'telegram' && (
+                <div>
+                  <div className="flex items-center space-x-3 mb-6">
+                    <h2 className="text-2xl font-bold text-white">Telegram Integration</h2>
+                    <div className="flex items-center space-x-2 px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full">
+                      <Crown className="h-4 w-4 text-purple-400" />
+                      <span className="text-purple-400 text-sm font-medium">Elite Feature</span>
+                    </div>
+                  </div>
+
+                  {user.plan !== 'elite' ? (
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-8 text-center">
+                      <Crown className="h-16 w-16 text-purple-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-white mb-2">Elite Feature</h3>
+                      <p className="text-gray-300 mb-6">
+                        Telegram integration is available exclusively for Elite plan users. Send your trading signals directly to your Telegram channel.
+                      </p>
+                      <a
+                        href="/plans"
+                        className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+                      >
+                        Upgrade to Elite
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Setup Instructions */}
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-6">
+                        <button
+                          onClick={() => setShowTelegramInstructions(!showTelegramInstructions)}
+                          className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 font-medium"
+                        >
+                          <Info className="h-4 w-4" />
+                          <span>Setup Instructions</span>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${showTelegramInstructions ? 'rotate-180' : ''}`} />
+                        </button>
+                        
+                        {showTelegramInstructions && (
+                          <div className="mt-4 space-y-2 text-sm text-gray-300">
+                            {telegramInstructions.steps.map((step, index) => (
+                              <p key={index} className="leading-relaxed">
+                                {step}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Configuration Form */}
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Bot Token
+                          </label>
+                          <div className="relative">
+                            <Bot className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <input
+                              type="password"
+                              value={telegramBotToken}
+                              onChange={(e) => setTelegramBotToken(e.target.value)}
+                              className="pl-10 w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">Get this from @BotFather on Telegram</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Chat ID
+                          </label>
+                          <div className="relative">
+                            <MessageSquare className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <input
+                              type="text"
+                              value={telegramChatId}
+                              onChange={(e) => setTelegramChatId(e.target.value)}
+                              className="pl-10 w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="-1001234567890"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">Your group/channel chat ID (negative number for groups)</p>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id="telegramEnabled"
+                            checked={telegramEnabled}
+                            onChange={(e) => setTelegramEnabled(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor="telegramEnabled" className="text-gray-300">
+                            Enable Telegram integration
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Test Button */}
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={handleTelegramTest}
+                          disabled={telegramTesting || !telegramBotToken || !telegramChatId}
+                          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center space-x-2"
+                        >
+                          {telegramTesting ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Testing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <TestTube className="h-4 w-4" />
+                              <span>Test Connection</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          onClick={handleTelegramUpdate}
+                          disabled={loading}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center space-x-2"
+                        >
+                          <Save className="h-4 w-4" />
+                          <span>{loading ? 'Saving...' : 'Save Settings'}</span>
+                        </button>
+                      </div>
+
+                      {/* Test Result */}
+                      {telegramTestResult && (
+                        <div className={`p-4 rounded-lg border ${
+                          telegramTestResult === 'success' 
+                            ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                            : 'bg-red-500/10 border-red-500/20 text-red-400'
+                        }`}>
+                          <div className="flex items-center space-x-2">
+                            {telegramTestResult === 'success' ? (
+                              <CheckCircle className="h-4 w-4" />
+                            ) : (
+                              <AlertCircle className="h-4 w-4" />
+                            )}
+                            <span className="font-medium">
+                              {telegramTestResult === 'success' 
+                                ? 'Test successful! Check your Telegram channel.'
+                                : 'Test failed. Please check your configuration.'
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Feature Description */}
+                      <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-6">
+                        <h3 className="text-purple-400 font-semibold mb-3">How it works:</h3>
+                        <ul className="text-gray-300 space-y-2 text-sm">
+                          <li>• Generate trading signals in the dashboard</li>
+                          <li>• Click "Send to Telegram" button on any analysis</li>
+                          <li>• Formatted signal with all details sent to your channel</li>
+                          <li>• Share signals with your team or community</li>
+                          <li>• Professional formatting with risk warnings</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {activeTab === 'privacy' && (
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-6">Privacy & Data</h2>
@@ -655,7 +949,7 @@ const Settings: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-400">Payment Method:</span>
-                            <span className="text-white">PayPal</span>
+                            <span className="text-white">Pay.com</span>
                           </div>
                         </div>
                       </div>
