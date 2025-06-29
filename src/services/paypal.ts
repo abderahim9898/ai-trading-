@@ -1,7 +1,7 @@
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 
 // Updated to use the correct PayPal Client ID from your dashboard
-export const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'AXx3_6Uc5uEaKyQ3lo2TObG2hnLmgqFfK3nWn-hB96wr7R-08nO6nivLY_YSdZVGuDs6o9nQ4aYh5eSl';
+export const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'AYGUIXYvnaCxrGFnm3rw5t8v2lwrT-vBuTcd2PpUkG7I4QEMASBR1H0NJDaL1glTyUGQt5_5CL0q4yUi';
 
 export const paypalOptions = {
   'client-id': PAYPAL_CLIENT_ID,
@@ -66,25 +66,25 @@ export const getPayPalSetupInstructions = () => {
   return {
     title: "PayPal Configuration Complete ✅",
     steps: [
-      "✅ PayPal Client ID: AXx3_6Uc5uEaKyQ3lo2TObG2hnLmgqFfK3nWn-hB96wr7R-08nO6nivLY_YSdZVGuDs6o9nQ4aYh5eSl",
+      "✅ PayPal Client ID: AYGUIXYvnaCxrGFnm3rw5t8v2lwrT-vBuTcd2PpUkG7I4QEMASBR1H0NJDaL1glTyUGQt5_5CL0q4yUi",
       "✅ Pro Plan ID: P-06P792050H561492LNBQW6ZA (AI Trading Pro Monthly)",
       "✅ Elite Plan ID: P-2D270313MK3350614NBQYT3Q (Elite Plan)",
       "",
       "🎉 Configuration synchronized with your PayPal dashboard!",
       "",
       "📊 Your PayPal Apps Dashboard Shows:",
-      "• Multiple REST API apps available",
-      "• Using Client ID from the correct app with subscription plans",
+      "• TRADIA v22 app with Client ID: AYGUIXYvnaCxrGFnm3rw5t8v2lwrT-vBuTcd2PpUkG7I4QEMASBR1H0NJDaL1glTyUGQt5_5CL0q4yUi",
       "• Both subscription plans are ACTIVE (ON)",
+      "• Ready for live payments",
       "",
       "📝 Next steps:",
-      "1. Ensure your .env file has the correct VITE_PAYPAL_CLIENT_ID",
+      "1. Update your .env file with the correct VITE_PAYPAL_CLIENT_ID",
       "2. Go to /setup and click 'Setup All Data'",
       "3. Test payment flow on /plans page",
       "",
-      "🔍 Important: Make sure the Client ID matches the app that contains your subscription plans!"
+      "🔍 This Client ID should match the PayPal app containing your subscription plans!"
     ],
-    note: "Your PayPal integration is now properly configured with the correct Client ID and Plan IDs!"
+    note: "Your PayPal integration is now properly configured with the correct Client ID from TRADIA v22 app!"
   };
 };
 
