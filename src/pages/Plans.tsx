@@ -9,7 +9,9 @@ import {
   hasValidPayPalPlan, 
   getPayPalSetupInstructions,
   debugPayPalConfig,
-  testPayPalPlan
+  testPayPalPlan,
+  refreshPayPalConfig,
+  getValidPayPalPlans
 } from '../services/paypal';
 import { Plan } from '../types';
 import { 
@@ -34,7 +36,9 @@ import {
   CreditCard,
   Settings,
   Wrench,
-  RefreshCw
+  RefreshCw,
+  CheckSquare,
+  XSquare
 } from 'lucide-react';
 
 const Plans: React.FC = () => {
@@ -48,6 +52,15 @@ const Plans: React.FC = () => {
   const [paypalReady, setPaypalReady] = useState(false);
   const [showSetupInstructions, setShowSetupInstructions] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
+  const [configStatus, setConfigStatus] = useState<{
+    validPlans: string[];
+    errors: string[];
+    lastCheck: Date | null;
+  }>({
+    validPlans: [],
+    errors: [],
+    lastCheck: null
+  });
 
   useEffect(() => {
     loadPlans();
@@ -61,24 +74,28 @@ const Plans: React.FC = () => {
       // Run debug check
       debugPayPalConfig();
       
-      // Validate configuration
-      validatePayPalConfig();
+      // Refresh and validate configuration
+      const result = await refreshPayPalConfig();
       
-      // Test plan validity
-      const proValid = await testPayPalPlan('pro');
-      const eliteValid = await testPayPalPlan('elite');
+      setConfigStatus({
+        validPlans: result.validPlans,
+        errors: result.errors,
+        lastCheck: new Date()
+      });
       
-      if (proValid && eliteValid) {
+      if (result.success) {
         setPaypalReady(true);
         console.log('✅ PayPal initialization successful - All plans ready!');
+        setPaypalError('');
       } else {
-        throw new Error('One or more PayPal plans are invalid');
+        throw new Error(`Configuration issues: ${result.errors.join(', ')}`);
       }
       
     } catch (error: any) {
       console.error('❌ PayPal initialization failed:', error);
       setPaypalError(`PayPal Configuration Error: ${error.message}`);
       setShowSetupInstructions(true);
+      setPaypalReady(false);
     }
   };
 
@@ -86,7 +103,12 @@ const Plans: React.FC = () => {
     try {
       const plansData = await getPlans();
       setPlans(plansData);
-      console.log('📊 Loaded plans:', plansData.map(p => ({ id: p.id, name: p.name, paypal_plan_id: p.paypal_plan_id })));
+      console.log('📊 Loaded plans:', plansData.map(p => ({ 
+        id: p.id, 
+        name: p.name, 
+        paypal_plan_id: p.paypal_plan_id,
+        valid: hasValidPayPalPlan(p.id)
+      })));
     } catch (error) {
       console.error('Error loading plans:', error);
       setPaypalError('Failed to load subscription plans. Please refresh the page.');
@@ -267,7 +289,7 @@ const Plans: React.FC = () => {
             </div>
           </div>
 
-          {/* Debug Panel (Development) */}
+          {/* Configuration Status Panel */}
           {process.env.NODE_ENV === 'development' && (
             <div className="max-w-4xl mx-auto mb-8">
               <button
@@ -275,38 +297,79 @@ const Plans: React.FC = () => {
                 className="flex items-center space-x-2 text-gray-400 hover:text-white text-sm"
               >
                 <Settings className="h-4 w-4" />
-                <span>Debug PayPal Configuration</span>
+                <span>PayPal Configuration Status</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${debugMode ? 'rotate-180' : ''}`} />
               </button>
               
               {debugMode && (
-                <div className="mt-4 bg-black/40 border border-gray-600 rounded-lg p-4 text-xs font-mono">
-                  <div className="grid grid-cols-2 gap-4">
+                <div className="mt-4 bg-black/40 border border-gray-600 rounded-lg p-6">
+                  <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <p className="text-green-400 mb-2">✅ Configuration Status:</p>
-                      <p>Client ID: {PAYPAL_CLIENT_ID ? `${PAYPAL_CLIENT_ID.substring(0, 20)}...` : 'NOT SET'}</p>
-                      <p>PayPal Ready: {paypalReady ? 'YES' : 'NO'}</p>
-                      <p>Plans Loaded: {plans.length}</p>
+                      <h3 className="text-green-400 font-semibold mb-3">✅ Configuration Status</h3>
+                      <div className="space-y-2 text-sm">
+                        <p>Client ID: {PAYPAL_CLIENT_ID ? `${PAYPAL_CLIENT_ID.substring(0, 20)}...` : 'NOT SET'}</p>
+                        <p>PayPal Ready: {paypalReady ? '✅ YES' : '❌ NO'}</p>
+                        <p>Plans Loaded: {plans.length}</p>
+                        <p>Valid Plans: {configStatus.validPlans.length}/{plans.length}</p>
+                        {configStatus.lastCheck && (
+                          <p>Last Check: {configStatus.lastCheck.toLocaleTimeString()}</p>
+                        )}
+                      </div>
                     </div>
+                    
                     <div>
-                      <p className="text-blue-400 mb-2">📊 Plan Validation:</p>
-                      {plans.map(plan => (
-                        <p key={plan.id}>
-                          {plan.name}: {hasValidPayPalPlan(plan.id) ? '✅' : '❌'} 
-                          {plan.paypal_plan_id ? ` (${plan.paypal_plan_id.substring(0, 15)}...)` : ' (No ID)'}
-                        </p>
-                      ))}
+                      <h3 className="text-blue-400 font-semibold mb-3">📊 Plan Validation</h3>
+                      <div className="space-y-2 text-sm">
+                        {plans.map(plan => {
+                          const isValid = hasValidPayPalPlan(plan.id);
+                          return (
+                            <div key={plan.id} className="flex items-center space-x-2">
+                              {isValid ? (
+                                <CheckSquare className="h-4 w-4 text-green-400" />
+                              ) : (
+                                <XSquare className="h-4 w-4 text-red-400" />
+                              )}
+                              <span className={isValid ? 'text-green-400' : 'text-red-400'}>
+                                {plan.name}: {plan.paypal_plan_id ? `${plan.paypal_plan_id.substring(0, 15)}...` : 'No ID'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      debugPayPalConfig();
-                      initializePayPal();
-                    }}
-                    className="mt-2 text-blue-400 hover:text-blue-300 flex items-center space-x-1"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    <span>Refresh Configuration</span>
-                  </button>
+                  
+                  {configStatus.errors.length > 0 && (
+                    <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <h4 className="text-red-400 font-semibold mb-2">⚠️ Configuration Issues:</h4>
+                      <ul className="text-red-300 text-sm space-y-1">
+                        {configStatus.errors.map((error, index) => (
+                          <li key={index}>• {error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  <div className="mt-4 flex space-x-3">
+                    <button
+                      onClick={() => {
+                        debugPayPalConfig();
+                        initializePayPal();
+                      }}
+                      className="text-blue-400 hover:text-blue-300 flex items-center space-x-1 text-sm"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      <span>Refresh Configuration</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => window.open('/setup', '_blank')}
+                      className="text-green-400 hover:text-green-300 flex items-center space-x-1 text-sm"
+                    >
+                      <Settings className="h-3 w-3" />
+                      <span>Update Firestore</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -385,12 +448,13 @@ const Plans: React.FC = () => {
                 <>
                   <CheckCircle className="h-4 w-4" />
                   <span className="font-medium">PayPal Business Account Connected</span>
-                  <span className="text-xs">• Ready for subscriptions</span>
+                  <span className="text-xs">• {configStatus.validPlans.length}/{plans.length} plans ready</span>
                 </>
               ) : (
                 <>
                   <AlertCircle className="h-4 w-4" />
                   <span className="font-medium">PayPal Configuration Check</span>
+                  <span className="text-xs">• {configStatus.validPlans.length}/{plans.length} plans valid</span>
                   <button
                     onClick={initializePayPal}
                     className="ml-auto text-xs hover:underline"
