@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useAuth } from '../hooks/useAuth';
 import { getPlans, updateUserPlan } from '../services/firestore';
-import { paypalOptions, PAYPAL_CLIENT_ID, validatePayPalConfig, hasValidPayPalPlan, getPayPalSetupInstructions } from '../services/paypal';
+import { 
+  paypalOptions, 
+  PAYPAL_CLIENT_ID, 
+  validatePayPalConfig, 
+  hasValidPayPalPlan, 
+  getPayPalSetupInstructions,
+  debugPayPalConfig,
+  testPayPalPlan
+} from '../services/paypal';
 import { Plan } from '../types';
 import { 
   CheckCircle, 
@@ -25,7 +33,8 @@ import {
   ExternalLink,
   CreditCard,
   Settings,
-  Wrench
+  Wrench,
+  RefreshCw
 } from 'lucide-react';
 
 const Plans: React.FC = () => {
@@ -38,22 +47,46 @@ const Plans: React.FC = () => {
   const [paypalSuccess, setPaypalSuccess] = useState<string>('');
   const [paypalReady, setPaypalReady] = useState(false);
   const [showSetupInstructions, setShowSetupInstructions] = useState(false);
+  const [debugMode, setDebugMode] = useState(false);
 
   useEffect(() => {
     loadPlans();
-    // Validate PayPal configuration on component mount
-    try {
-      validatePayPalConfig();
-      setPaypalReady(true);
-    } catch (error: any) {
-      setPaypalError(`PayPal Configuration Error: ${error.message}`);
-    }
+    initializePayPal();
   }, []);
+
+  const initializePayPal = async () => {
+    try {
+      console.log('🔄 Initializing PayPal configuration...');
+      
+      // Run debug check
+      debugPayPalConfig();
+      
+      // Validate configuration
+      validatePayPalConfig();
+      
+      // Test plan validity
+      const proValid = await testPayPalPlan('pro');
+      const eliteValid = await testPayPalPlan('elite');
+      
+      if (proValid && eliteValid) {
+        setPaypalReady(true);
+        console.log('✅ PayPal initialization successful - All plans ready!');
+      } else {
+        throw new Error('One or more PayPal plans are invalid');
+      }
+      
+    } catch (error: any) {
+      console.error('❌ PayPal initialization failed:', error);
+      setPaypalError(`PayPal Configuration Error: ${error.message}`);
+      setShowSetupInstructions(true);
+    }
+  };
 
   const loadPlans = async () => {
     try {
       const plansData = await getPlans();
       setPlans(plansData);
+      console.log('📊 Loaded plans:', plansData.map(p => ({ id: p.id, name: p.name, paypal_plan_id: p.paypal_plan_id })));
     } catch (error) {
       console.error('Error loading plans:', error);
       setPaypalError('Failed to load subscription plans. Please refresh the page.');
@@ -72,7 +105,7 @@ const Plans: React.FC = () => {
     setPaypalError('');
 
     try {
-      console.log('PayPal Success Data:', data);
+      console.log('🎉 PayPal Success Data:', data);
       
       // Validate the response data
       if (!data.subscriptionID && !data.orderID) {
@@ -133,6 +166,8 @@ const Plans: React.FC = () => {
     if (!selectedPlan?.paypal_plan_id) {
       throw new Error('Plan configuration error: PayPal Plan ID not found');
     }
+
+    console.log('🔄 Creating PayPal subscription for plan:', selectedPlan.paypal_plan_id);
 
     return actions.subscription.create({
       plan_id: selectedPlan.paypal_plan_id,
@@ -219,7 +254,7 @@ const Plans: React.FC = () => {
             <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-400">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-green-400" />
-                <span>No setup fees</span>
+                <span>Business Account Ready</span>
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle className="h-4 w-4 text-green-400" />
@@ -231,6 +266,51 @@ const Plans: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Debug Panel (Development) */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="max-w-4xl mx-auto mb-8">
+              <button
+                onClick={() => setDebugMode(!debugMode)}
+                className="flex items-center space-x-2 text-gray-400 hover:text-white text-sm"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Debug PayPal Configuration</span>
+              </button>
+              
+              {debugMode && (
+                <div className="mt-4 bg-black/40 border border-gray-600 rounded-lg p-4 text-xs font-mono">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-green-400 mb-2">✅ Configuration Status:</p>
+                      <p>Client ID: {PAYPAL_CLIENT_ID ? `${PAYPAL_CLIENT_ID.substring(0, 20)}...` : 'NOT SET'}</p>
+                      <p>PayPal Ready: {paypalReady ? 'YES' : 'NO'}</p>
+                      <p>Plans Loaded: {plans.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-blue-400 mb-2">📊 Plan Validation:</p>
+                      {plans.map(plan => (
+                        <p key={plan.id}>
+                          {plan.name}: {hasValidPayPalPlan(plan.id) ? '✅' : '❌'} 
+                          {plan.paypal_plan_id ? ` (${plan.paypal_plan_id.substring(0, 15)}...)` : ' (No ID)'}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      debugPayPalConfig();
+                      initializePayPal();
+                    }}
+                    className="mt-2 text-blue-400 hover:text-blue-300 flex items-center space-x-1"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    <span>Refresh Configuration</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Global Success Message */}
           {paypalSuccess && (
@@ -253,13 +333,6 @@ const Plans: React.FC = () => {
                 <div className="flex-1">
                   <p className="font-medium mb-2">Payment Issue</p>
                   <p className="text-sm">{paypalError}</p>
-                  {paypalError.includes('Configuration') && (
-                    <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                      <p className="text-yellow-400 text-xs">
-                        <strong>For Developers:</strong> Please ensure your PayPal Client ID is properly configured in the environment variables.
-                      </p>
-                    </div>
-                  )}
                 </div>
                 <button
                   onClick={() => setPaypalError('')}
@@ -274,25 +347,25 @@ const Plans: React.FC = () => {
           {/* PayPal Setup Instructions */}
           {showSetupInstructions && (
             <div className="max-w-4xl mx-auto mb-8">
-              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-6">
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
                 <div className="flex items-start space-x-3">
-                  <Wrench className="h-6 w-6 text-yellow-400 mt-1 flex-shrink-0" />
+                  <Info className="h-6 w-6 text-blue-400 mt-1 flex-shrink-0" />
                   <div className="flex-1">
-                    <h3 className="text-yellow-400 font-semibold mb-3">{setupInstructions.title}</h3>
-                    <div className="space-y-2 text-sm text-gray-300">
+                    <h3 className="text-blue-400 font-semibold mb-3">{setupInstructions.title}</h3>
+                    <div className="space-y-1 text-sm text-gray-300">
                       {setupInstructions.steps.map((step, index) => (
                         <p key={index} className="leading-relaxed">{step}</p>
                       ))}
                     </div>
-                    <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                      <p className="text-blue-400 text-sm">
-                        <strong>Note:</strong> {setupInstructions.note}
+                    <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                      <p className="text-green-400 text-sm">
+                        <strong>Business Account Status:</strong> {setupInstructions.note}
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setShowSetupInstructions(false)}
-                    className="text-yellow-400 hover:text-yellow-300 text-xl leading-none"
+                    className="text-blue-400 hover:text-blue-300 text-xl leading-none"
                   >
                     ×
                   </button>
@@ -301,24 +374,33 @@ const Plans: React.FC = () => {
             </div>
           )}
 
-          {/* PayPal Configuration Warning */}
-          {!paypalReady && (
-            <div className="max-w-4xl mx-auto mb-8">
-              <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-6 py-4 rounded-xl flex items-start space-x-3">
-                <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="font-medium mb-2">PayPal Setup Required</p>
-                  <p className="text-sm">PayPal integration is not fully configured. Payments may not work correctly.</p>
+          {/* PayPal Status Banner */}
+          <div className="max-w-4xl mx-auto mb-8">
+            <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg border text-sm ${
+              paypalReady 
+                ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+            }`}>
+              {paypalReady ? (
+                <>
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="font-medium">PayPal Business Account Connected</span>
+                  <span className="text-xs">• Ready for subscriptions</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-medium">PayPal Configuration Check</span>
                   <button
-                    onClick={() => setShowSetupInstructions(true)}
-                    className="mt-2 text-sm text-yellow-300 hover:text-yellow-200 underline"
+                    onClick={initializePayPal}
+                    className="ml-auto text-xs hover:underline"
                   >
-                    View Setup Instructions
+                    Retry Connection
                   </button>
-                </div>
-              </div>
+                </>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Pricing Cards */}
           <div className="grid lg:grid-cols-3 gap-8 mb-20">
@@ -418,7 +500,7 @@ const Plans: React.FC = () => {
                                 window.location.href = '/login';
                                 return;
                               }
-                              if (!hasPayPalId) {
+                              if (!hasPayPalId || !paypalReady) {
                                 setShowSetupInstructions(true);
                                 return;
                               }
@@ -440,14 +522,10 @@ const Plans: React.FC = () => {
                                 <span>Sign In to Subscribe</span>
                                 <ExternalLink className="h-4 w-4" />
                               </>
-                            ) : !hasPayPalId ? (
+                            ) : !hasPayPalId || !paypalReady ? (
                               <>
                                 <Settings className="h-4 w-4" />
-                                <span>Setup Required</span>
-                              </>
-                            ) : !paypalReady ? (
-                              <>
-                                <span>Setup Required</span>
+                                <span>Configuration Check</span>
                               </>
                             ) : (
                               <>
@@ -470,9 +548,9 @@ const Plans: React.FC = () => {
                               <div className="flex items-start space-x-2">
                                 <CreditCard className="h-4 w-4 text-blue-400 mt-0.5 flex-shrink-0" />
                                 <div className="text-xs text-blue-300">
-                                  <p className="font-medium mb-1">Secure Payment via PayPal:</p>
+                                  <p className="font-medium mb-1">Secure Business Payment via PayPal:</p>
                                   <p>• Payment processed securely by PayPal</p>
-                                  <p>• No PayPal account required</p>
+                                  <p>• Business account verified</p>
                                   <p>• Cancel anytime from your dashboard</p>
                                 </div>
                               </div>
@@ -522,6 +600,8 @@ const Plans: React.FC = () => {
                     {plan.paypal_plan_id && process.env.NODE_ENV === 'development' && (
                       <div className="mt-4 text-xs text-gray-500 text-center bg-black/20 rounded p-2">
                         Plan ID: {plan.paypal_plan_id}
+                        <br />
+                        Valid: {hasPayPalId ? '✅' : '❌'}
                       </div>
                     )}
                   </div>
@@ -566,10 +646,10 @@ const Plans: React.FC = () => {
                   <Users className="h-8 w-8 text-white" />
                 </div>
                 <h4 className="text-xl font-semibold text-white mb-2">
-                  Trusted by Thousands
+                  Business Account Ready
                 </h4>
                 <p className="text-gray-300">
-                  Join over 10,000+ traders who trust our AI-powered insights for their trading decisions
+                  Professional PayPal business integration with verified merchant status for secure transactions
                 </p>
               </div>
             </div>
