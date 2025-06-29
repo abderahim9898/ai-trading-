@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>suivi de stock</title>
+    <style>
+   body {
+            font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+            margin: 0;
+            padding: 0;
+            background-color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #004d40;
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin: 5px 0 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin: 5px 0 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box;
+            
+        }
+        button {
+            padding: 12px 20px;
+            background-color: #004d40;
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #00332b;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #004d40;
+            color: #ffffff;
+            position: sticky;
+            top: 0;
+        }
+        input[type="search"] {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #data-entry-form {
+            display: none;
+            margin-top: 20px;
+        }
+        #data-entry-form input,
+        #data-entry-form select {
+            margin-bottom: 15px;
+        }
+        #data-entry-form button {
+            margin-right: 10px;
+        }
+        #form-container {
+            display: flex;
+            justify-content: space-between;
+        }
+        #sum-container {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    
+<div class="container">
+    <button id="youtubeButton">Go to Principale</button>
+
+    <label for="sheet-select">LA CULTURE:</label>
+    <select style="font-weight: bold;" id="sheet-select">
+        <option style="font-weight: bold;" value="https://script.google.com/macros/s/AKfycbwkXSp6EJ9W5m42MbOuYUDMbcagWwvHOA5Cz6tPuZr_gvdVHwzrJA0d1bdvbGbKnVPs/exec">CEBOLLINO</option>
+        <option style="font-weight: bold;" value="https://script.google.com/macros/s/AKfycbwDGlg6n5_Z07Mnb5hwdMhJG-kTCa-miqfwN8s3EIxlkTZTcLTMZyxTmcCoONsz7Frk/exec">ESTRAGON</option>
+        <option style="font-weight: bold;" value="https://script.google.com/macros/s/AKfycbwBELfrTVMuq5pWqrDZ3NM8OZ-IedmQ_H74557libXU1_FnvvN4o9hLOGk_EkNaXEU/exec">HABANERO</option>
+    </select>
+
+    
+
+    <button id="show-form-btn">Add Data</button>
+
+    <div id="form-container">
+        <form id="data-entry-form">
+            <label for="date">Date:</label>
+            <input type="date" id="date" name="date" required>
+
+            <label for="stock-initial">PARCELLES</label>
+            
+            <select style="font-weight: bold;" id="stock-initial">
+                <option style="font-weight: bold;" value="P40 CEBOLLINO">P40 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P41 CEBOLLINO">P41 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P42 CEBOLLINO">P42 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P43 CEBOLLINO">P43 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P44 CEBOLLINO">P44 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P45 HABANERO">P45 HABANERO</option>
+                <option style="font-weight: bold;" value="P46 CEBOLLINO">P46 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P47 CEBOLLINO">P47 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P48 ESTRAGON">P48 ESTRAGON</option>
+                <option style="font-weight: bold;" value="P49 CEBOLLINO">P49 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P50 CEBOLLINO">P50 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P51 CEBOLLINO">P51 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P52 ESTRAGON">P52 ESTRAGON</option>
+                <option style="font-weight: bold;" value="P53 ESTRAGON">P53 ESTRAGON</option>
+                <option style="font-weight: bold;" value="P54 CEBOLLINO">P54 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P55 CEBOLLINO">P55 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P56 CEBOLLINO">P56 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P57 CEBOLLINO">P57 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P58 CEBOLLINO">P58 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P59 CEBOLLINO">P59 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P60 CEBOLLINO">P60 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P61 CEBOLLINO">P61 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P62 CEBOLLINO">P62 CEBOLLINO</option>
+                <option style="font-weight: bold;" value="P63 CEBOLLINO">P63 CEBOLLINO</option>
+            </select>
+            <label for="entree">FINI/BRUT</label>
+            
+            <select style="font-weight: bold;" id="entree">
+                <option style="font-weight: bold;" value="BRUT">BRUT</option>
+                <option style="font-weight: bold;" value="FINI (MONOJO)">FINI (MONOJO)</option>
+                <option style="font-weight: bold;" value="FINI (GRAMMAGE)">FINI (GRAMMAGE)</option>
+            </select>
+            <label for="sortie">TOTAL BRUT</label>
+            <input type="number" id="sortie" name="sortie" >
+
+            <label for="stock-final">TOTAL FINI:</label>
+            <input type="number" id="stock-final" name="stockFinal" >
+
+            <label for="observation">SUPERFICIE:</label>
+            <input type="text" id="observation" name="observation">
+			
+			<label for="coupre">COUPE:</label>
+        
+			<select style="font-weight: bold;" id="coupre">
+                <option style="font-weight: bold;" value="COUPE 1">COUPE 1</option>
+                <option style="font-weight: bold;" value="COUPE 2">COUPE 2</option>
+                <option style="font-weight: bold;" value="COUPE 3">COUPE 3</option>
+                <option style="font-weight: bold;" value="COUPE 4">COUPE 4</option>
+                <option style="font-weight: bold;" value="COUPE 5">COUPE 5</option>
+                <option style="font-weight: bold;" value="COUPE 6">COUPE 6</option>
+                <option style="font-weight: bold;" value="COUPE 7">COUPE 7</option>
+            </select>
+             
+			 <label for="weeknumber">SEMAINE:</label>
+             <input type="number" id="weeknumber" name="weekNumber" readonly>
+            <button type="submit">Submit</button>
+            <button type="button" id="hide-form-btn">Cancel</button>
+        </form>
+    </div>
+
+    <h2 style="text-align: center; font-weight: bold;" id="table-title">Selected Sheet: Sheet 1</h2>
+
+    <div style="text-align: center;" id="sum-container">T.FINI: <span id="sumColumn3"></span> / T.BRUT: <span id="sumColumn4"></span></span> / ECART: <span id="ECART"></span>/ SUP: <span id="sumColumn5"></span></div>
+
+    <table id="data-table">
+        <thead>
+            <tr></tr>
+        </thead>
+        <tbody>
+            <!-- Table rows will be dynamically inserted here -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.getElementById('date').addEventListener('change', function() {
+    const date = new Date(this.value);
+    const weekNumber = getWeekNumber(date);
+    document.getElementById('weeknumber').value = weekNumber;
+});
+
+function getWeekNumber(d) {
+    // Create a new date object to prevent modification of the original date
+    const date = new Date(d);
+    // Set to the first day of the year
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 4 - (date.getDay() || 7)); // Set to nearest Thursday
+    const yearStart = new Date(date.getFullYear(), 0, 1);
+    return Math.ceil((((date - yearStart) / 86400000) + 1) / 7); // Calculate week number
+}
+
+    document.getElementById('youtubeButton').onclick = function() {
+    window.location.href = 'https://abdermb98.github.io/home/';
+};
+    let currentSheetUrl = '';
+    let currentSheetName = '';
+
+    document.getElementById('sheet-select').addEventListener('change', function() {
+        currentSheetUrl = this.value;
+        currentSheetName = this.options[this.selectedIndex].text;
+        document.getElementById('table-title').textContent = `${currentSheetName}`;
+        
+        loadTableData();
+    });
+
+    
+
+    document.getElementById('data-entry-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!currentSheetUrl) {
+            alert('Please select a Google Sheet.');
+            return;
+        }
+
+        const data = {
+            date: document.getElementById('date').value,
+            stockInitial: document.getElementById('stock-initial').value,
+            entree: document.getElementById('entree').value,
+            sortie: document.getElementById('sortie').value,
+            stockFinal: document.getElementById('stock-final').value,
+            observation: document.getElementById('observation').value,
+			coupre: document.getElementById('coupre').value,
+			weeknumber: document.getElementById('weeknumber').value
+        };
+
+        fetch(currentSheetUrl, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        })
+        .then(response => response.json())
+        .then(data => {
+		    clear1();
+            alert('OK!');
+            loadTableData();
+			
+            document.getElementById('data-entry-form').style.display = 'none'; // إخفاء النموذج بعد الإرسال
+			
+        })
+		
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    });
+
+    function loadTableData() {
+        if (!currentSheetUrl) return;
+        fetch(`${currentSheetUrl}?getData=true`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'error') {
+                alert(data.message);
+                return;
+            }
+            const tableHead = document.getElementById('data-table').querySelector('thead');
+            const tableBody = document.getElementById('data-table').querySelector('tbody');
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            const headRow = document.createElement('tr');
+            data.data[0].forEach((cell, index) => {
+                const th = document.createElement('th');
+                th.textContent = cell;
+                const searchInput = document.createElement('input');
+                searchInput.type = 'search';
+                searchInput.placeholder = 'Search...';
+                searchInput.addEventListener('input', () => {
+                    filterTable(index, searchInput.value);
+                });
+                th.appendChild(searchInput);
+                headRow.appendChild(th);
+            });
+            tableHead.appendChild(headRow);
+
+            data.data.slice(1).forEach(row => {
+                const tr = document.createElement('tr');
+                row.forEach((cell, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = index === 0 ? formatDate(cell) : cell;
+                    tr.appendChild(td);
+                });
+                tableBody.appendChild(tr);
+            });
+
+            updateColumnSums(); // تحديث مجموع الأعمدة بعد تحميل البيانات
+        });
+    }
+
+    function formatDate(value) {
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? value : `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
+    }
+	function clear1() {
+	
+    document.getElementById('stock-initial').value='';
+    document.getElementById('entree').value='';
+    document.getElementById('sortie').value='';
+    document.getElementById('stock-final').value='';
+    document.getElementById('observation').value='';
+	coupre: document.getElementById('coupre').value='';
+	
+        
+    }
+
+// متغير لحفظ الفلاتر النشطة
+let activeFilters = {};
+
+// Function to filter the table based on a single column and search term
+function filterTable(columnIndex, searchTerm) {
+    // تحديث الفلاتر النشطة بإضافة الفلتر الجديد
+    if (searchTerm) {
+        activeFilters[columnIndex] = searchTerm.toLowerCase();
+    } else {
+        // إذا كان مصطلح البحث فارغًا، يتم إزالة الفلتر لهذا العمود
+        delete activeFilters[columnIndex];
+    }
+
+    const rows = document.querySelectorAll('#data-table tbody tr');
+
+    rows.forEach(row => {
+        let shouldShow = true;
+
+        // فحص جميع الفلاتر النشطة لكل صف
+        for (const [colIndex, term] of Object.entries(activeFilters)) {
+            const cellText = row.cells[colIndex].textContent.toLowerCase();
+            const match = cellText.includes(term);
+            
+            // إذا فشل أي فلتر، يتم إخفاء الصف
+            if (!match) {
+                shouldShow = false;
+                break;
+            }
+        }
+
+        // عرض أو إخفاء الصف بناءً على نتائج الفلاتر
+        row.style.display = shouldShow ? '' : 'none';
+    });
+	updateColumnSums();
+}
+
+// Function to reset all filters
+function resetFilters() {
+    activeFilters = {}; // إعادة تعيين الفلاتر النشطة
+    const rows = document.querySelectorAll('#data-table tbody tr');
+    rows.forEach(row => row.style.display = ''); // عرض جميع الصفوف
+	updateColumnSums();
+}
+
+
+
+
+
+    function updateColumnSums() {
+        const rows = document.querySelectorAll('#data-table tbody tr');
+        let sumColumn3 = 0;
+        let sumColumn4 = 0;
+		let sumColumn5 = 0;
+
+        rows.forEach(row => {
+            if (row.style.display !== 'none') { // تأكد من حساب الصفوف غير المخفية فقط
+                const column3Value = parseFloat(row.cells[4].textContent) || 0;
+                const column4Value = parseFloat(row.cells[3].textContent) || 0;
+				const column5Value = parseFloat(row.cells[5].textContent) || 0;
+                sumColumn3 += column3Value;
+                sumColumn4 += column4Value;
+				sumColumn5 += column5Value;
+                
+            }
+        });
+        const ECART =(sumColumn4-sumColumn3)*100/sumColumn4;
+		const ECART1 =(sumColumn4-sumColumn3)*100/sumColumn4;
+        document.getElementById('sumColumn3').textContent = sumColumn3.toFixed(0);
+        document.getElementById('sumColumn4').textContent = sumColumn4.toFixed(0);
+		document.getElementById('ECART').textContent = ECART.toFixed(0) + '%';
+		document.getElementById('sumColumn5').textContent = sumColumn5.toFixed(0)+ 'M²';
+    }
+
+    document.getElementById('show-form-btn').addEventListener('click', () => {
+        document.getElementById('data-entry-form').style.display = 'block';
+    });
+
+    document.getElementById('hide-form-btn').addEventListener('click', () => {
+        document.getElementById('data-entry-form').style.display = 'none';
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // تعيين ورقة العمل الافتراضية عند تحميل الصفحة
+        document.getElementById('sheet-select').dispatchEvent(new Event('change'));
+    });
+</script>
+</body>
+</html>
