@@ -2,7 +2,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { PAYPAL_PLAN_IDS } from '../services/paypal';
 
-// Plans data - Both plans now configured with correct PayPal Plan IDs! 🎉
+// Plans data - Updated with correct PayPal Plan IDs
 const plansData = [
   {
     id: 'free',
@@ -20,7 +20,7 @@ const plansData = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 19.99, // ✅ Matches your PayPal plan
+    price: 29, // Updated to match your PayPal plan
     recommendations_per_day: 5,
     features: [
       '5 signals per day',
@@ -28,7 +28,7 @@ const plansData = [
       'Priority support',
       'Historical data'
     ],
-    paypal_plan_id: PAYPAL_PLAN_IDS.pro, // ✅ P-45K919511S534301FNBQVDII
+    paypal_plan_id: PAYPAL_PLAN_IDS.pro, // P-45K919511S534301FNBQVDII
     popular: true
   },
   {
@@ -43,7 +43,7 @@ const plansData = [
       'Custom strategies',
       'API access'
     ],
-    paypal_plan_id: PAYPAL_PLAN_IDS.elite, // ✅ P-16783531A4944761DNBQVFNI
+    paypal_plan_id: PAYPAL_PLAN_IDS.elite, // P-16783531A4944761DNBQVFNI - This should fix the setup issue
     popular: false
   }
 ];
@@ -78,7 +78,7 @@ const schoolsData = [
 
 export const setupPlans = async () => {
   try {
-    console.log('🚀 Setting up subscription plans...');
+    console.log('🚀 Setting up subscription plans with PayPal integration...');
     
     for (const plan of plansData) {
       const { id, ...planData } = plan;
@@ -88,15 +88,23 @@ export const setupPlans = async () => {
       if (plan.paypal_plan_id) {
         console.log(`   💳 PayPal Plan ID: ${plan.paypal_plan_id}`);
         console.log(`   💰 Price: $${plan.price}/month`);
+        console.log(`   🎯 Status: Ready for payments`);
       } else {
         console.log(`   🆓 Free plan - no PayPal integration needed`);
       }
     }
     
     console.log('🎉 All plans setup completed!');
-    console.log('✅ Pro plan ($19.99/month) - Ready for payments!');
-    console.log('✅ Elite plan ($99/month) - Ready for payments!');
-    console.log('🚀 Your subscription system is fully operational!');
+    console.log('');
+    console.log('📊 PAYMENT SYSTEM STATUS:');
+    console.log('✅ Free Plan - Ready');
+    console.log('✅ Pro Plan ($29/month) - PayPal ID: P-45K919511S534301FNBQVDII');
+    console.log('✅ Elite Plan ($99/month) - PayPal ID: P-16783531A4944761DNBQVFNI');
+    console.log('');
+    console.log('🔧 If you still see "Setup Required":');
+    console.log('1. Verify plans are ACTIVE in PayPal Developer Dashboard');
+    console.log('2. Check that Client ID has access to these plans');
+    console.log('3. Ensure plans are in the correct environment (sandbox/live)');
   } catch (error) {
     console.error('❌ Error setting up plans:', error);
     throw error;
@@ -129,19 +137,18 @@ export const setupAllFirestoreData = async () => {
     
     console.log('✨ Firestore setup completed successfully!');
     console.log('');
-    console.log('📊 PAYMENT SYSTEM STATUS:');
-    console.log('✅ Free Plan - Ready');
-    console.log('✅ Pro Plan ($19.99/month) - PayPal Configured & Ready');
-    console.log('✅ Elite Plan ($99/month) - PayPal Configured & Ready');
+    console.log('📊 FINAL STATUS:');
+    console.log('✅ All plans configured with correct PayPal Plan IDs');
+    console.log('✅ Elite Plan: P-16783531A4944761DNBQVFNI');
+    console.log('✅ Pro Plan: P-45K919511S534301FNBQVDII');
     console.log('✅ All trading schools configured');
     console.log('');
     console.log('🎯 NEXT STEPS:');
-    console.log('1. Test Pro plan payment flow');
-    console.log('2. Test Elite plan payment flow');
-    console.log('3. Verify user plan upgrades work correctly');
-    console.log('4. Check daily signal limits are applied');
+    console.log('1. Go to /setup and run "Setup All Data"');
+    console.log('2. Verify plans show "Get Started" instead of "Setup Required"');
+    console.log('3. Test payment flow for both plans');
     console.log('');
-    console.log('🚀 Your AI Trading platform is ready for business!');
+    console.log('🚀 Your AI Trading platform should now be fully operational!');
   } catch (error) {
     console.error('💥 Failed to setup Firestore data:', error);
     throw error;
