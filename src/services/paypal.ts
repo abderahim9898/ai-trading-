@@ -1,5 +1,6 @@
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 
+// Updated to use the correct PayPal Client ID from your dashboard
 export const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || 'AXx3_6Uc5uEaKyQ3lo2TObG2hnLmgqFfK3nWn-hB96wr7R-08nO6nivLY_YSdZVGuDs6o9nQ4aYh5eSl';
 
 export const paypalOptions = {
@@ -60,29 +61,30 @@ export const hasValidPayPalPlan = (planId: string): boolean => {
   return isValid;
 };
 
-// Instructions for PayPal setup - Updated with correct plan IDs
+// Instructions for PayPal setup - Updated with correct configuration
 export const getPayPalSetupInstructions = () => {
   return {
-    title: "PayPal Configuration Synchronized ✅",
+    title: "PayPal Configuration Complete ✅",
     steps: [
-      "✅ PayPal Client ID: Configured",
+      "✅ PayPal Client ID: AXx3_6Uc5uEaKyQ3lo2TObG2hnLmgqFfK3nWn-hB96wr7R-08nO6nivLY_YSdZVGuDs6o9nQ4aYh5eSl",
       "✅ Pro Plan ID: P-06P792050H561492LNBQW6ZA (AI Trading Pro Monthly)",
       "✅ Elite Plan ID: P-2D270313MK3350614NBQYT3Q (Elite Plan)",
       "",
-      "🎉 Plan IDs now match your PayPal dashboard exactly!",
+      "🎉 Configuration synchronized with your PayPal dashboard!",
       "",
-      "📊 Your PayPal Dashboard Shows:",
-      "• Pro Plan: P-06P792050H561492LNBQW6ZA - AI Trading Pro Monthly - ON",
-      "• Elite Plan: P-2D270313MK3350614NBQYT3Q - Elite Plan - ON",
+      "📊 Your PayPal Apps Dashboard Shows:",
+      "• Multiple REST API apps available",
+      "• Using Client ID from the correct app with subscription plans",
+      "• Both subscription plans are ACTIVE (ON)",
       "",
       "📝 Next steps:",
-      "1. Go to /setup and click 'Setup All Data'",
-      "2. Both plans should now show 'Get Started' buttons",
-      "3. Test the payment flow for both plans",
+      "1. Ensure your .env file has the correct VITE_PAYPAL_CLIENT_ID",
+      "2. Go to /setup and click 'Setup All Data'",
+      "3. Test payment flow on /plans page",
       "",
-      "🔍 Both plans are ACTIVE with 0 subscriptions - ready for testing!"
+      "🔍 Important: Make sure the Client ID matches the app that contains your subscription plans!"
     ],
-    note: "Plan IDs have been synchronized with your PayPal dashboard. Your payment system should now work perfectly!"
+    note: "Your PayPal integration is now properly configured with the correct Client ID and Plan IDs!"
   };
 };
 
