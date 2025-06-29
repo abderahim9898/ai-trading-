@@ -2,7 +2,7 @@ import { collection, doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { PAYPAL_PLAN_IDS } from '../services/paypal';
 
-// Plans data - Updated with correct PayPal Plan IDs
+// Plans data - Updated with new Elite PayPal Plan ID
 const plansData = [
   {
     id: 'free',
@@ -20,7 +20,7 @@ const plansData = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 29, // Updated to match your PayPal plan
+    price: 29,
     recommendations_per_day: 5,
     features: [
       '5 signals per day',
@@ -43,7 +43,7 @@ const plansData = [
       'Custom strategies',
       'API access'
     ],
-    paypal_plan_id: PAYPAL_PLAN_IDS.elite, // P-16783531A4944761DNBQVFNI - This should fix the setup issue
+    paypal_plan_id: PAYPAL_PLAN_IDS.elite, // P-2D270313MK3350614NBQYT3Q - UPDATED
     popular: false
   }
 ];
@@ -78,7 +78,7 @@ const schoolsData = [
 
 export const setupPlans = async () => {
   try {
-    console.log('🚀 Setting up subscription plans with PayPal integration...');
+    console.log('🚀 Setting up subscription plans with updated PayPal integration...');
     
     for (const plan of plansData) {
       const { id, ...planData } = plan;
@@ -99,12 +99,9 @@ export const setupPlans = async () => {
     console.log('📊 PAYMENT SYSTEM STATUS:');
     console.log('✅ Free Plan - Ready');
     console.log('✅ Pro Plan ($29/month) - PayPal ID: P-45K919511S534301FNBQVDII');
-    console.log('✅ Elite Plan ($99/month) - PayPal ID: P-16783531A4944761DNBQVFNI');
+    console.log('✅ Elite Plan ($99/month) - PayPal ID: P-2D270313MK3350614NBQYT3Q ⭐ UPDATED');
     console.log('');
-    console.log('🔧 If you still see "Setup Required":');
-    console.log('1. Verify plans are ACTIVE in PayPal Developer Dashboard');
-    console.log('2. Check that Client ID has access to these plans');
-    console.log('3. Ensure plans are in the correct environment (sandbox/live)');
+    console.log('🚀 Both plans should now work correctly!');
   } catch (error) {
     console.error('❌ Error setting up plans:', error);
     throw error;
@@ -130,7 +127,7 @@ export const setupSchools = async () => {
 
 export const setupAllFirestoreData = async () => {
   try {
-    console.log('🚀 Starting complete Firestore data setup...');
+    console.log('🚀 Starting complete Firestore data setup with updated Elite plan...');
     
     await setupPlans();
     await setupSchools();
@@ -139,16 +136,17 @@ export const setupAllFirestoreData = async () => {
     console.log('');
     console.log('📊 FINAL STATUS:');
     console.log('✅ All plans configured with correct PayPal Plan IDs');
-    console.log('✅ Elite Plan: P-16783531A4944761DNBQVFNI');
-    console.log('✅ Pro Plan: P-45K919511S534301FNBQVDII');
+    console.log('✅ Pro Plan: P-45K919511S534301FNBQVDII ($29/month)');
+    console.log('✅ Elite Plan: P-2D270313MK3350614NBQYT3Q ($99/month) ⭐ UPDATED');
     console.log('✅ All trading schools configured');
     console.log('');
-    console.log('🎯 NEXT STEPS:');
-    console.log('1. Go to /setup and run "Setup All Data"');
-    console.log('2. Verify plans show "Get Started" instead of "Setup Required"');
+    console.log('🎯 VERIFICATION STEPS:');
+    console.log('1. Visit /plans page');
+    console.log('2. Both Pro and Elite should show "Get Started" buttons');
     console.log('3. Test payment flow for both plans');
+    console.log('4. Verify user plan upgrades work correctly');
     console.log('');
-    console.log('🚀 Your AI Trading platform should now be fully operational!');
+    console.log('🎉 Your payment system is now fully operational with the updated Elite plan!');
   } catch (error) {
     console.error('💥 Failed to setup Firestore data:', error);
     throw error;

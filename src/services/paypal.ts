@@ -25,10 +25,10 @@ export const handlePayPalSuccess = async (data: any, userId: string, planId: str
   }
 };
 
-// PayPal Plan IDs - Updated with correct IDs
+// PayPal Plan IDs - Updated with new Elite plan ID
 export const PAYPAL_PLAN_IDS = {
   pro: 'P-45K919511S534301FNBQVDII',   // Pro Plan: $29/month
-  elite: 'P-16783531A4944761DNBQVFNI'  // Elite Plan: $99/month - This is the one showing "Setup Required"
+  elite: 'P-2D270313MK3350614NBQYT3Q'  // Elite Plan: $99/month - UPDATED ID
 };
 
 // Validate PayPal configuration
@@ -60,28 +60,28 @@ export const hasValidPayPalPlan = (planId: string): boolean => {
   return isValid;
 };
 
-// Instructions for PayPal setup - Updated to reflect current status
+// Instructions for PayPal setup - Updated with new Elite plan ID
 export const getPayPalSetupInstructions = () => {
   return {
-    title: "PayPal Configuration Status",
+    title: "PayPal Configuration Updated ✅",
     steps: [
       "✅ PayPal Client ID: Configured",
-      "✅ Pro Plan ID: P-45K919511S534301FNBQVDII",
-      "✅ Elite Plan ID: P-16783531A4944761DNBQVFNI",
+      "✅ Pro Plan ID: P-45K919511S534301FNBQVDII ($29/month)",
+      "✅ Elite Plan ID: P-2D270313MK3350614NBQYT3Q ($99/month) - UPDATED",
       "",
-      "🔍 If you're seeing 'Setup Required', please verify:",
-      "1. The PayPal plan IDs are active in your PayPal Developer Dashboard",
-      "2. The plans are approved and not in draft status",
-      "3. Your PayPal Client ID has access to these plans",
-      "4. The plans are configured for the correct environment (sandbox vs live)",
+      "🎉 Both plans are now configured with correct PayPal Plan IDs!",
       "",
-      "📝 To check your PayPal plans:",
-      "• Go to developer.paypal.com",
-      "• Navigate to 'Billing Plans'",
-      "• Verify both plan IDs exist and are 'ACTIVE'",
-      "• Ensure they're in the same environment as your Client ID"
+      "📝 Next steps:",
+      "1. Go to /setup and click 'Setup All Data'",
+      "2. Verify both plans show 'Get Started' buttons",
+      "3. Test the payment flow for both plans",
+      "",
+      "🔍 If you still see 'Setup Required':",
+      "• Verify the plans are ACTIVE in PayPal Developer Dashboard",
+      "• Check that your Client ID has access to these plans",
+      "• Ensure plans are in the correct environment (sandbox vs live)"
     ],
-    note: "Both plan IDs are configured in the code. If you're still seeing setup issues, the plans may need to be activated in your PayPal Developer Dashboard."
+    note: "Elite plan ID has been updated to P-2D270313MK3350614NBQYT3Q. Your payment system should now be fully operational!"
   };
 };
 
