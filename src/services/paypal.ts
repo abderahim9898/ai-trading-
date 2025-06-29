@@ -25,10 +25,10 @@ export const handlePayPalSuccess = async (data: any, userId: string, planId: str
   }
 };
 
-// PayPal Plan IDs - Updated with new Elite plan ID
+// PayPal Plan IDs - Updated to match your actual PayPal dashboard
 export const PAYPAL_PLAN_IDS = {
-  pro: 'P-45K919511S534301FNBQVDII',   // Pro Plan: $29/month
-  elite: 'P-2D270313MK3350614NBQYT3Q'  // Elite Plan: $99/month - UPDATED ID
+  pro: 'P-06P792050H561492LNBQW6ZA',    // ✅ AI Trading Pro Monthly
+  elite: 'P-2D270313MK3350614NBQYT3Q'   // ✅ Elite Plan
 };
 
 // Validate PayPal configuration
@@ -60,28 +60,29 @@ export const hasValidPayPalPlan = (planId: string): boolean => {
   return isValid;
 };
 
-// Instructions for PayPal setup - Updated with new Elite plan ID
+// Instructions for PayPal setup - Updated with correct plan IDs
 export const getPayPalSetupInstructions = () => {
   return {
-    title: "PayPal Configuration Updated ✅",
+    title: "PayPal Configuration Synchronized ✅",
     steps: [
       "✅ PayPal Client ID: Configured",
-      "✅ Pro Plan ID: P-45K919511S534301FNBQVDII ($29/month)",
-      "✅ Elite Plan ID: P-2D270313MK3350614NBQYT3Q ($99/month) - UPDATED",
+      "✅ Pro Plan ID: P-06P792050H561492LNBQW6ZA (AI Trading Pro Monthly)",
+      "✅ Elite Plan ID: P-2D270313MK3350614NBQYT3Q (Elite Plan)",
       "",
-      "🎉 Both plans are now configured with correct PayPal Plan IDs!",
+      "🎉 Plan IDs now match your PayPal dashboard exactly!",
+      "",
+      "📊 Your PayPal Dashboard Shows:",
+      "• Pro Plan: P-06P792050H561492LNBQW6ZA - AI Trading Pro Monthly - ON",
+      "• Elite Plan: P-2D270313MK3350614NBQYT3Q - Elite Plan - ON",
       "",
       "📝 Next steps:",
       "1. Go to /setup and click 'Setup All Data'",
-      "2. Verify both plans show 'Get Started' buttons",
+      "2. Both plans should now show 'Get Started' buttons",
       "3. Test the payment flow for both plans",
       "",
-      "🔍 If you still see 'Setup Required':",
-      "• Verify the plans are ACTIVE in PayPal Developer Dashboard",
-      "• Check that your Client ID has access to these plans",
-      "• Ensure plans are in the correct environment (sandbox vs live)"
+      "🔍 Both plans are ACTIVE with 0 subscriptions - ready for testing!"
     ],
-    note: "Elite plan ID has been updated to P-2D270313MK3350614NBQYT3Q. Your payment system should now be fully operational!"
+    note: "Plan IDs have been synchronized with your PayPal dashboard. Your payment system should now work perfectly!"
   };
 };
 
