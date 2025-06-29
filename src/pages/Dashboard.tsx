@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getSchools, getDoc, doc } from '../services/firestore';
+import { getSchools, saveRecommendation, incrementUserUsage } from '../services/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { generateTradingSignalWithRealData } from '../services/gpt';
 import { fetchMultiTimeframeData, generateMockMultiTimeframeData, TRADING_PAIRS, testApiConnection } from '../services/marketData';
-import { saveRecommendation, incrementUserUsage } from '../services/firestore';
 import { sendTelegramMessage, formatSignalForTelegram } from '../services/telegram';
 import { db } from '../config/firebase';
 import { School } from '../types';
