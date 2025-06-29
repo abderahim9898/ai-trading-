@@ -226,124 +226,73 @@ export const generateTradingSignalWithRealData = async ({
 };
 
 const callOpenRouterAPI = async (prompt: string): Promise<string> => {
-  // Enhanced validation and error handling
   if (!OPENROUTER_API_KEY) {
-    throw new Error('OpenRouter API key is not configured. Please check your .env file and ensure VITE_OPENROUTER_API_KEY is set.');
+    throw new Error('OpenRouter API key is not configured');
   }
   
-  if (OPENROUTER_API_KEY.trim() === '' || OPENROUTER_API_KEY === 'your_openrouter_key') {
-    throw new Error('OpenRouter API key appears to be invalid or not properly set. Please update your .env file with a valid API key.');
-  }
-  
-  console.log('Making request to OpenRouter API...');
-  
-  try {
-    const response = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': window.location.origin,
-        'X-Title': 'AI Trading Signals'
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert trading analyst. Provide clear, actionable trading recommendations based on the candlestick data provided. Include confidence level, signal type (buy/sell/hold), and reasoning.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 2000,
-        temperature: 0.1
-      })
-    });
+  const response = await fetch(OPENROUTER_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': window.location.origin,
+      'X-Title': 'AI Trading Signals'
+    },
+    body: JSON.stringify({
+      model: 'openai/gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert trading analyst. Provide clear, actionable trading recommendations based on the candlestick data provided. Include confidence level, signal type (buy/sell/hold), and reasoning.'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.1
+    })
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      
-      if (response.status === 401) {
-        throw new Error(`Authentication failed. Please verify your OpenRouter API key is correct and has sufficient credits. Status: ${response.status}`);
-      } else if (response.status === 429) {
-        throw new Error(`Rate limit exceeded. Please wait before making another request. Status: ${response.status}`);
-      } else if (response.status === 402) {
-        throw new Error(`Insufficient credits. Please check your OpenRouter account balance. Status: ${response.status}`);
-      } else {
-        throw new Error(`OpenRouter API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
-      }
-    }
-
-    const data = await response.json();
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error('Invalid response format from OpenRouter API');
-    }
-    
-    return data.choices[0].message.content || 'No recommendation generated';
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Network error while calling OpenRouter API: ${error}`);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`OpenRouter API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
   }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || 'No recommendation generated';
 };
 
 const callGeminiAPI = async (prompt: string): Promise<string> => {
   if (!GEMINI_API_KEY) {
-    throw new Error('Gemini API key is not configured. Please check your .env file and ensure VITE_GEMINI_API_KEY is set.');
-  }
-  
-  if (GEMINI_API_KEY.trim() === '' || GEMINI_API_KEY === 'your_gemini_key') {
-    throw new Error('Gemini API key appears to be invalid or not properly set. Please update your .env file with a valid API key.');
+    throw new Error('Gemini API key is not configured');
   }
   
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
   
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { 
-          temperature: 0, 
-          topK: 1, 
-          maxOutputTokens: 4096 
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
-      
-      if (response.status === 401) {
-        throw new Error(`Authentication failed. Please verify your Gemini API key is correct. Status: ${response.status}`);
-      } else if (response.status === 429) {
-        throw new Error(`Rate limit exceeded. Please wait before making another request. Status: ${response.status}`);
-      } else {
-        throw new Error(`Gemini API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { 
+        temperature: 0, 
+        topK: 1, 
+        maxOutputTokens: 4096 
       }
-    }
+    })
+  });
 
-    const data = await response.json();
-    
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error('Invalid response format from Gemini API');
-    }
-    
-    return data.candidates[0].content.parts[0].text || 'No recommendation generated';
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Network error while calling Gemini API: ${error}`);
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Gemini API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
   }
+
+  const data = await response.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No recommendation generated';
 };
 
 // Legacy function for backward compatibility
