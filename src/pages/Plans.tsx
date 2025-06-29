@@ -38,7 +38,8 @@ import {
   Wrench,
   RefreshCw,
   CheckSquare,
-  XSquare
+  XSquare,
+  ChevronDown
 } from 'lucide-react';
 
 const Plans: React.FC = () => {
