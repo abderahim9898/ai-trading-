@@ -16,27 +16,13 @@ import {
   Crown,
   Settings,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  FileText
 } from 'lucide-react';
-interface AnalysisDisplayProps {
-  analysis: string;
-  prompt?: string;   // أضف هذا السطر
-  signal?: {
-    pair: string;
-    type: 'buy' | 'sell' | 'hold';
-    entry?: number;
-    stopLoss?: number;
-    takeProfit1?: number;
-    takeProfit2?: number;
-    probability?: number;
-  };
-  school: string;
-  timestamp?: Date;
-  onSendToTelegram?: (message: string) => Promise<void>;
-}
 
 interface AnalysisDisplayProps {
   analysis: string;
+  prompt?: string;
   signal?: {
     pair: string;
     type: 'buy' | 'sell' | 'hold';
@@ -53,6 +39,7 @@ interface AnalysisDisplayProps {
 
 const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   analysis,
+  prompt,
   signal,
   school,
   timestamp,
@@ -60,6 +47,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 }) => {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [sendingToTelegram, setSendingToTelegram] = useState(false);
   const [telegramSent, setTelegramSent] = useState(false);
 
@@ -155,6 +143,17 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error('Failed to copy to clipboard:', error);
+    }
+  };
+
+  const copyPromptToClipboard = async () => {
+    if (!prompt) return;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopiedPrompt(true);
+      setTimeout(() => setCopiedPrompt(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy prompt:', error);
     }
   };
 
@@ -288,7 +287,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
           </div>
           
           <div className="flex items-center space-x-3">
-            {/* Copy Button */}
+            {/* Copy Analysis Button */}
             <button
               onClick={copyToClipboard}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all"
@@ -305,6 +304,26 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
                 </>
               )}
             </button>
+
+            {/* Copy Prompt Button */}
+            {prompt && (
+              <button
+                onClick={copyPromptToClipboard}
+                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all"
+              >
+                {copiedPrompt ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4" />
+                    <span>Copy Prompt</span>
+                  </>
+                )}
+              </button>
+            )}
 
             {/* Telegram Button - Elite Only */}
             {user?.plan === 'elite' && onSendToTelegram && (
@@ -406,17 +425,6 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       </div>
     </div>
   );
-};
-const [copiedPrompt, setCopiedPrompt] = useState(false);
-const copyPromptToClipboard = async () => {
-  if (!prompt) return;
-  try {
-    await navigator.clipboard.writeText(prompt);
-    setCopiedPrompt(true);
-    setTimeout(() => setCopiedPrompt(false), 2000);
-  } catch (error) {
-    console.error('Failed to copy prompt:', error);
-  }
 };
 
 export default AnalysisDisplay;
