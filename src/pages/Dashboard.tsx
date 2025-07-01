@@ -612,4 +612,29 @@ const Dashboard: React.FC = () => {
   );
 };
 
+const CopyButton: React.FC<{ textToCopy: string }> = ({ textToCopy }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(textToCopy)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // إلغاء حالة النسخ بعد ثانيتين
+      })
+      .catch(() => {
+        setCopied(false);
+      });
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+      aria-label="Copy text"
+    >
+      {copied ? 'تم النسخ!' : 'نسخ'}
+    </button>
+  );
+};
+
 export default Dashboard;
