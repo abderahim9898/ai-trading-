@@ -18,6 +18,22 @@ import {
   ExternalLink,
   MessageSquare
 } from 'lucide-react';
+interface AnalysisDisplayProps {
+  analysis: string;
+  prompt?: string;   // أضف هذا السطر
+  signal?: {
+    pair: string;
+    type: 'buy' | 'sell' | 'hold';
+    entry?: number;
+    stopLoss?: number;
+    takeProfit1?: number;
+    takeProfit2?: number;
+    probability?: number;
+  };
+  school: string;
+  timestamp?: Date;
+  onSendToTelegram?: (message: string) => Promise<void>;
+}
 
 interface AnalysisDisplayProps {
   analysis: string;
@@ -390,6 +406,17 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       </div>
     </div>
   );
+};
+const [copiedPrompt, setCopiedPrompt] = useState(false);
+const copyPromptToClipboard = async () => {
+  if (!prompt) return;
+  try {
+    await navigator.clipboard.writeText(prompt);
+    setCopiedPrompt(true);
+    setTimeout(() => setCopiedPrompt(false), 2000);
+  } catch (error) {
+    console.error('Failed to copy prompt:', error);
+  }
 };
 
 export default AnalysisDisplay;
