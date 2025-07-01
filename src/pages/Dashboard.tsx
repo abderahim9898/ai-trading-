@@ -29,7 +29,10 @@ import {
   Wifi,
   WifiOff,
   CheckCircle,
-  XCircle
+  XCircle,
+  Copy,
+  Check,
+  FileText
 } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
@@ -49,6 +52,7 @@ const Dashboard: React.FC = () => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [apiStatus, setApiStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
   const [telegramConfig, setTelegramConfig] = useState<any>(null);
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
 
   useEffect(() => {
     loadSchools();
@@ -134,6 +138,123 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Create the full prompt that would be sent to AI
+  const createFullPrompt = (): string => {
+    if (!marketData || !selectedSchool) return '';
+    
+    const school = schools.find(s => s.id === selectedSchool);
+    if (!school) return '';
+
+    const jsonData = JSON.stringify(marketData, null, 2);
+    
+    return `You are an elite-level financial market analyst and trading assistant, specialized in short-term technical analysis of assets like Gold (XAU/USD), indices, and currencies.
+
+Your task is to generate highly detailed, actionable trade recommendations based on raw candlestick data (OHLC), focusing on the 5-minute and 15-minute timeframes, while considering the context of the 1-hour and 4-hour charts.
+
+The recommendations are for intraday scalping or short-term swings, valid for a few hours unless market structure shifts significantly.
+
+You are allowed to use only ONE indicator: *ATR (Average True Range)* (14-period, on 15m or 5m), strictly for:
+- Dynamic stop-loss placement (e.g., 1.5x ATR below demand zone)
+- Assessing market volatility (avoid trades in low or extremely high volatility)
+- Adjusting risk-to-reward calculations
+
+━━━━━━━━━━━━━━━━━━━━━━
+📌 *Strict Trading Rules:*
+✅ Only trade setups based on *strong Supply & Demand zones*  
+✅ Do *NOT* enter immediately — wait for *clear confirmation* like:
+- Bullish/Bearish Engulfing candle
+- CHoCH (Change of Character) on 5m
+- Internal liquidity sweep or FVG mitigation
+
+🚫 Ignore weak zones or already-mitigated zones.
+
+━━━━━━━━━━━━━━━━━━━━━━
+🔶 Definition of a "Strong Zone":
+- Fresh and untouched (unmitigated)
+- Originated from an aggressive move away (impulsive)
+- Clearly visible on 1H or 4H charts
+- Contains FVG or internal/external liquidity sweep
+- Aligned with higher timeframe market structure
+
+━━━━━━━━━━━━━━━━━━━━━━
+📊 1. Multi-Timeframe Context (4H & 1H)
+- What is the overall market structure and trend?
+- Are we approaching any strong institutional Supply/Demand zones?
+- Is there unmitigated imbalance or liquidity above/below?
+- What is the current ATR value and what does it imply?
+
+━━━━━━━━━━━━━━━━━━━━━━
+📈 2. Execution Timeframes (15M & 5M)
+- Detect CHoCH / BOS / liquidity traps
+- Look for price action confirmations: Engulfing candle, FVG tap, etc.
+- Check if ATR conditions support a clean entry
+- Validate that the zone has not been touched
+
+━━━━━━━━━━━━━━━━━━━━━━
+🎯 3. Trade Setup Recommendation
+- Direction: Buy / Sell / No Trade
+- Entry Price: After confirmation only
+- Stop Loss: Below/above structure or zone using 1.5x ATR
+- TP1 & TP2: Defined profit targets
+- Risk-to-Reward Ratio: To TP1 and TP2
+- Trade Type: Momentum / Reversal / Liquidity Sweep
+- ATR Notes: Include value and how it influenced SL or trade filtering
+
+━━━━━━━━━━━━━━━━━━━━━━
+🧠 4. Justification & Reasoning
+- Why this zone specifically?
+- What confirmation was used?
+- How does this align with higher timeframe context?
+- How did ATR and structure support this setup?
+
+━━━━━━━━━━━━━━━━━━━━━━
+⚠ 5. Invalidation / No-Trade Criteria
+- Zone has already been touched or broken
+- ATR is too high or too low (causing poor RR)
+- No valid confirmation appears near the zone
+- Sudden market structure shift or BOS in the opposite direction
+
+IMPORTANT: At the end of your analysis, provide a structured summary in this exact format:
+
+SIGNAL SUMMARY:
+Pair: [SYMBOL]
+Type: [BUY/SELL/HOLD]
+Entry: [price or "Wait for confirmation"]
+Stop Loss: [price]
+Take Profit 1: [price]
+Take Profit 2: [price]
+Probability: [percentage]%
+
+📝 Format your analysis like a professional trader's briefing note — clean, structured, and concise — as if you're advising a prop trading firm.
+Be as brief as possible in your answer and give me only the important points such as the recommendation, the reason for entering and its success rate.
+
+TRADING SCHOOL METHODOLOGY:
+${school.prompt}
+
+SYMBOL: ${selectedPair}
+
+Here is the multi-timeframe candlestick data:
+
+${jsonData}`;
+  };
+
+  const copyFullPromptToClipboard = async () => {
+    try {
+      const fullPrompt = createFullPrompt();
+      if (!fullPrompt) {
+        setError('No prompt available. Please select a trading school and fetch market data first.');
+        return;
+      }
+      
+      await navigator.clipboard.writeText(fullPrompt);
+      setCopiedPrompt(true);
+      setTimeout(() => setCopiedPrompt(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy prompt to clipboard:', error);
+      setError('Failed to copy prompt to clipboard');
+    }
+  };
+
   const generateSignal = async () => {
     if (!user || !selectedSchool) return;
 
@@ -186,10 +307,6 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-    <div className="mt-4 flex items-center space-x-2">
-    <p className="text-white">{lastRecommendation}</p>
-    <CopyButton textToCopy={lastRecommendation} />
-  </div>
   };
 
   const handleSendToTelegram = async (message: string) => {
@@ -433,13 +550,34 @@ const Dashboard: React.FC = () => {
                           <span className="text-yellow-400 text-xs">({t('signal.demoData')})</span>
                         )}
                       </div>
-                      <button
-                        onClick={fetchMarketData}
-                        disabled={dataLoading}
-                        className="text-green-400 hover:text-green-300 p-1 rounded transition-colors"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${dataLoading ? 'animate-spin' : ''}`} />
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        {/* Copy Full Prompt Button */}
+                        <button
+                          onClick={copyFullPromptToClipboard}
+                          disabled={!marketData || !selectedSchool}
+                          className="flex items-center space-x-1 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-all disabled:opacity-50"
+                        >
+                          {copiedPrompt ? (
+                            <>
+                              <Check className="h-3 w-3" />
+                              <span>Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="h-3 w-3" />
+                              <span>Copy Prompt</span>
+                            </>
+                          )}
+                        </button>
+                        
+                        <button
+                          onClick={fetchMarketData}
+                          disabled={dataLoading}
+                          className="text-green-400 hover:text-green-300 p-1 rounded transition-colors"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${dataLoading ? 'animate-spin' : ''}`} />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-green-300 text-sm mt-1">
                       {selectedPair} • {candleCount} candles • 4 timeframes
@@ -613,31 +751,6 @@ const Dashboard: React.FC = () => {
         )}
       </div>
     </div>
-  );
-};
-
-const CopyButton: React.FC<{ textToCopy: string }> = ({ textToCopy }) => {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(textToCopy)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000); // إلغاء حالة النسخ بعد ثانيتين
-      })
-      .catch(() => {
-        setCopied(false);
-      });
-  };
-
-  return (
-    <button
-      onClick={handleCopy}
-      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
-      aria-label="Copy text"
-    >
-      {copied ? 'تم النسخ!' : 'نسخ'}
-    </button>
   );
 };
 
