@@ -186,6 +186,10 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
+    <div className="mt-4 flex items-center space-x-2">
+    <p className="text-white">{lastRecommendation}</p>
+    <CopyButton textToCopy={lastRecommendation} />
+  </div>
   };
 
   const handleSendToTelegram = async (message: string) => {
