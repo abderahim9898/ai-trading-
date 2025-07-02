@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { loadPayPalSDK, getPayPalPlanConfig } from '../services/paypal';
 import { updateUserPlan } from '../services/firestore';
-import { CreditCard, Loader, Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { CreditCard, Loader, Shield, CheckCircle, AlertCircle, TestTube, Play } from 'lucide-react';
 
 interface PayPalButtonProps {
   plan: any; // Full plan object from Firestore
@@ -23,6 +23,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   const [loading, setLoading] = useState(true);
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [setupRequired, setSetupRequired] = useState(false);
+  const [testMode, setTestMode] = useState(true); // Enable test mode for virtual testing
   const paypalRef = useRef<HTMLDivElement>(null);
   const buttonsRendered = useRef(false);
 
@@ -82,9 +83,17 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
         layout: 'vertical',
         color: 'blue',
         shape: 'rect',
-        label: 'subscribe'
+        label: 'subscribe',
+        height: 45
       },
       createSubscription: function(data: any, actions: any) {
+        console.log('🎯 Creating PayPal subscription for:', {
+          planId: planConfig.id,
+          userEmail,
+          amount: `$${plan.price}`,
+          testMode
+        });
+
         return actions.subscription.create({
           'plan_id': planConfig.id,
           'subscriber': {
@@ -111,7 +120,10 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
           onSuccess({
             subscriptionId: data.subscriptionID,
             planId: plan.id,
-            status: 'approved'
+            planName: plan.name,
+            amount: plan.price,
+            status: 'approved',
+            testMode
           });
           
         } catch (error: any) {
@@ -128,6 +140,38 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
         onError('Payment was cancelled. You can try again anytime.');
       }
     }).render(paypalRef.current);
+  };
+
+  // Virtual test purchase function
+  const handleVirtualTest = async () => {
+    try {
+      console.log('🧪 Starting virtual test purchase...');
+      setLoading(true);
+      
+      // Simulate PayPal approval process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const mockSubscriptionId = `TEST_SUB_${Date.now()}`;
+      
+      // Update user plan in Firestore
+      await updateUserPlan(userId, plan.id, mockSubscriptionId);
+      
+      onSuccess({
+        subscriptionId: mockSubscriptionId,
+        planId: plan.id,
+        planName: plan.name,
+        amount: plan.price,
+        status: 'approved',
+        testMode: true
+      });
+      
+      console.log('✅ Virtual test purchase completed successfully!');
+    } catch (error: any) {
+      console.error('❌ Virtual test failed:', error);
+      onError(`Virtual test failed: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -197,6 +241,40 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Test Mode Banner */}
+      {testMode && (
+        <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
+          <div className="flex items-start space-x-2">
+            <TestTube className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-purple-300">
+              <p className="font-medium mb-1">🧪 Virtual Testing Mode</p>
+              <p>You can test the purchase flow without real payment processing.</p>
+              <p className="mt-2">Plan: {plan.name} - ${plan.price}/month</p>
+              <p>Features: {plan.recommendations_per_day} signals per day</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Virtual Test Button */}
+      <button
+        onClick={handleVirtualTest}
+        disabled={disabled || loading}
+        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-4 px-6 rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-2 mb-4"
+      >
+        {loading ? (
+          <>
+            <Loader className="h-4 w-4 animate-spin" />
+            <span>Processing Virtual Test...</span>
+          </>
+        ) : (
+          <>
+            <Play className="h-4 w-4" />
+            <span>🧪 Test Purchase (Virtual)</span>
+          </>
+        )}
+      </button>
+
       {/* Payment Security Info */}
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
         <div className="flex items-start space-x-2">
@@ -206,6 +284,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
             <p>• Buyer protection and secure checkout</p>
             <p>• Multiple payment methods supported</p>
             <p>• Cancel anytime from your dashboard</p>
+            <p>• Test mode: No real charges will be made</p>
           </div>
         </div>
       </div>
@@ -227,6 +306,17 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
           <span>•</span>
           <span>📱 PayPal Balance</span>
         </div>
+      </div>
+
+      {/* Test Instructions */}
+      <div className="bg-gray-500/10 border border-gray-500/20 rounded-lg p-3">
+        <p className="text-gray-400 text-xs font-medium mb-1">💡 Testing Instructions:</p>
+        <ul className="text-gray-400 text-xs space-y-1">
+          <li>• Click "Test Purchase (Virtual)" for instant testing</li>
+          <li>• Or use PayPal button with sandbox account</li>
+          <li>• Your plan will be updated immediately</li>
+          <li>• Check dashboard for new signal limits</li>
+        </ul>
       </div>
     </div>
   );

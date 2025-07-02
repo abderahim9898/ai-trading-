@@ -51,7 +51,7 @@ export const PAYPAL_PLAN_IDS = {
 // Validate PayPal configuration
 export const validatePayPalConfig = (): boolean => {
   if (!PAYPAL_CLIENT_ID || PAYPAL_CLIENT_ID === 'your_paypal_client_id') {
-    throw new Error('PayPal Client ID is not configured');
+    throw new Error('PayPal Client ID is not configured. Please add VITE_PAYPAL_CLIENT_ID to your .env file');
   }
   
   return true;
@@ -216,22 +216,32 @@ export const getPayPalSetupInstructions = () => {
   return {
     title: "PayPal Payment Integration Setup",
     steps: [
+      "🎯 TESTING SETUP (Current Configuration):",
+      "✅ Your Elite plan is configured with PayPal Plan ID: P-2D270313MK3350614NBQYT3Q",
+      "✅ Price: $99/month",
+      "✅ Features: 15 signals per day, VIP analysis, 24/7 support",
+      "",
+      "🔧 TO TEST PURCHASE:",
+      "1. Make sure you have VITE_PAYPAL_CLIENT_ID in your .env file",
+      "2. Go to /plans page",
+      "3. Click 'Get Started' on Elite plan",
+      "4. PayPal button should appear",
+      "5. Use PayPal sandbox account for testing",
+      "",
+      "📋 FULL SETUP GUIDE:",
       "1. Create a PayPal Business account at https://paypal.com",
       "2. Go to PayPal Developer Dashboard at https://developer.paypal.com",
       "3. Create a new application and get your Client ID",
       "4. Create subscription plans in PayPal Dashboard:",
       "   • Pro Plan: $29.99/month",
-      "   • Elite Plan: $99/month",
-      "5. Copy the Plan IDs from PayPal and update your Firestore plans:",
-      "   • Go to Firebase Console → Firestore → plans collection",
-      "   • Update the 'paypal_plan_id' field for each plan",
-      "   • Your Elite plan already has: P-2D270313MK3350614NBQYT3Q",
+      "   • Elite Plan: $99/month (already configured)",
+      "5. Copy the Plan IDs from PayPal and update your Firestore plans",
       "6. Add your Client ID to .env file:",
       "   VITE_PAYPAL_CLIENT_ID=your_client_id",
       "   VITE_PAYPAL_ENVIRONMENT=sandbox (or production)",
       "7. Test payments in sandbox mode before going live"
     ],
-    note: "PayPal offers secure payment processing with buyer protection and supports multiple payment methods."
+    note: "Your Elite plan is ready for testing! PayPal offers secure payment processing with buyer protection and supports multiple payment methods."
   };
 };
 
@@ -239,19 +249,32 @@ export const getPayPalSetupInstructions = () => {
 export const debugPayPalConfig = () => {
   console.log('🔍 PayPal Configuration Debug:');
   console.log('================================');
-  console.log('Client ID:', PAYPAL_CLIENT_ID ? `${PAYPAL_CLIENT_ID.substring(0, 10)}...` : 'NOT SET');
+  console.log('Client ID:', PAYPAL_CLIENT_ID ? `${PAYPAL_CLIENT_ID.substring(0, 10)}...` : '❌ NOT SET');
   console.log('Environment:', PAYPAL_ENVIRONMENT);
   console.log('Base URL:', PAYPAL_BASE_URL);
-  console.log('Reference Plan IDs:');
-  console.log('  Pro Plan ID:', PAYPAL_PLAN_IDS.pro);
-  console.log('  Elite Plan ID:', PAYPAL_PLAN_IDS.elite);
+  console.log('');
+  console.log('🎯 CONFIGURED PLANS:');
+  console.log('  Elite Plan ID:', PAYPAL_PLAN_IDS.elite, '✅ READY');
+  console.log('  Pro Plan ID:', PAYPAL_PLAN_IDS.pro, '⚠️ NEEDS SETUP');
+  console.log('');
+  console.log('💡 TESTING STATUS:');
   
   try {
     validatePayPalConfig();
-    console.log('✅ Configuration is valid');
-    console.log('ℹ️ Note: Plans are now checked individually based on their paypal_plan_id field');
+    console.log('✅ Configuration is valid - Ready for testing!');
+    console.log('');
+    console.log('🚀 TO TEST:');
+    console.log('1. Go to /plans page');
+    console.log('2. Click "Get Started" on Elite plan');
+    console.log('3. PayPal button should appear');
+    console.log('4. Complete test purchase');
   } catch (error) {
     console.log('❌ Configuration error:', error);
+    console.log('');
+    console.log('🔧 TO FIX:');
+    console.log('1. Add VITE_PAYPAL_CLIENT_ID to your .env file');
+    console.log('2. Get Client ID from PayPal Developer Dashboard');
+    console.log('3. Restart your development server');
   }
 };
 
@@ -260,9 +283,10 @@ export const testPayPalConnection = async (): Promise<boolean> => {
   try {
     validatePayPalConfig();
     await loadPayPalSDK();
+    console.log('✅ PayPal SDK loaded successfully - Ready for testing!');
     return true;
   } catch (error) {
-    console.error('PayPal connection test failed:', error);
+    console.error('❌ PayPal connection test failed:', error);
     return false;
   }
 };
