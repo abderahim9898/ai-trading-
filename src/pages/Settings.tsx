@@ -410,7 +410,7 @@ const Settings: React.FC = () => {
 
           {/* Content */}
           <div className="lg:col-span-3">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-8">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-4 sm:p-6 lg:p-8">
               {activeTab === 'profile' && (
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-6">Profile Information</h2>
@@ -853,10 +853,10 @@ const Settings: React.FC = () => {
                     <div className="border-t border-white/20 pt-6">
                       <h3 className="text-lg font-semibold text-white mb-4">Data Export & Deletion</h3>
                       
-                      <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="space-y-3">
                         <button
                           onClick={exportUserData}
-                          className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all"
+                          className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all"
                         >
                           <Download className="h-4 w-4" />
                           <span>Export My Data</span>
@@ -864,7 +864,7 @@ const Settings: React.FC = () => {
 
                         <button
                           onClick={() => setError('Account deletion is not available in this demo. Please contact support.')}
-                          className="flex items-center space-x-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all"
+                          className="w-full sm:w-auto flex items-center justify-center space-x-2 px-4 sm:px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all"
                         >
                           <Trash2 className="h-4 w-4" />
                           <span>Delete Account</span>
@@ -949,7 +949,7 @@ const Settings: React.FC = () => {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-400">Payment Method:</span>
-                            <span className="text-white">Pay.com</span>
+                            <span className="text-white">PayPal</span>
                           </div>
                         </div>
                       </div>
