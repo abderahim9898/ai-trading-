@@ -48,7 +48,8 @@ import {
   Award,
   TrendingDown,
   Minus,
-  MessageCircle
+  MessageCircle,
+  SquarePen
 } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
@@ -300,6 +301,23 @@ const AdminDashboard: React.FC = () => {
     return { totalUsers, activeSubscriptions, totalRecommendations, revenueMonthly };
   };
 
+  // Get plan ID from user document and convert to plan type
+  const getUserPlanType = (userPlan: string): string => {
+    // Check if it's already a standard plan type
+    if (['free', 'pro', 'elite'].includes(userPlan)) {
+      return userPlan;
+    }
+    
+    // Try to find the plan in the plans list
+    const plan = plans.find(p => p.id === userPlan);
+    if (plan) {
+      return plan.id; // Return the plan ID which should be 'free', 'pro', or 'elite'
+    }
+    
+    // Default to free if we can't determine the plan
+    return 'free';
+  };
+
   const getPlanIcon = (planId: string) => {
     switch (planId) {
       case 'free': return <Shield className="h-4 w-4" />;
@@ -461,8 +479,8 @@ const AdminDashboard: React.FC = () => {
                             <p className="text-white font-medium">{user.displayName || user.email}</p>
                             <p className="text-gray-400 text-sm">{user.email}</p>
                           </div>
-                          <div className={`px-2 py-1 rounded text-xs font-medium ${getPlanColor(user.plan)}`}>
-                            {user.plan}
+                          <div className={`px-2 py-1 rounded text-xs font-medium ${getPlanColor(getUserPlanType(user.plan))}`}>
+                            {getUserPlanType(user.plan)}
                           </div>
                         </div>
                       ))}
@@ -526,7 +544,7 @@ const AdminDashboard: React.FC = () => {
                           <td className="py-3">
                             {editingUser === user.uid ? (
                               <select
-                                value={user.plan}
+                                value={getUserPlanType(user.plan)}
                                 onChange={(e) => handleUpdateUserPlan(user.uid, e.target.value)}
                                 className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs"
                               >
@@ -537,9 +555,9 @@ const AdminDashboard: React.FC = () => {
                                 ))}
                               </select>
                             ) : (
-                              <div className={`px-2 py-1 rounded text-xs font-medium ${getPlanColor(user.plan)} flex items-center space-x-1`}>
-                                {getPlanIcon(user.plan)}
-                                <span>{user.plan}</span>
+                              <div className={`px-2 py-1 rounded text-xs font-medium ${getPlanColor(getUserPlanType(user.plan))} flex items-center space-x-1`}>
+                                {getPlanIcon(getUserPlanType(user.plan))}
+                                <span>{getUserPlanType(user.plan)}</span>
                               </div>
                             )}
                           </td>
@@ -553,15 +571,15 @@ const AdminDashboard: React.FC = () => {
                             <div className="flex items-center space-x-2">
                               <button
                                 onClick={() => setEditingUser(editingUser === user.uid ? null : user.uid)}
-                                className="p-1 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                                className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
                               >
-                                <Edit className="h-3 w-3" />
+                                <SquarePen className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleDeleteUser(user.uid)}
-                                className="p-1 rounded bg-red-600 hover:bg-red-700 text-white"
+                                className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </td>
@@ -645,7 +663,7 @@ const AdminDashboard: React.FC = () => {
                             onClick={() => setEditingPlan(editingPlan === plan.id ? null : plan.id)}
                             className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
                           >
-                            <Edit className="h-4 w-4" />
+                            <SquarePen className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDeletePlan(plan.id)}
@@ -721,7 +739,7 @@ const AdminDashboard: React.FC = () => {
                             onClick={() => setEditingSchool(editingSchool === school.id ? null : school.id)}
                             className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
                           >
-                            <Edit className="h-4 w-4" />
+                            <SquarePen className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteSchool(school.id)}
@@ -849,7 +867,7 @@ const AdminDashboard: React.FC = () => {
                             onClick={() => setEditingSignal(editingSignal === signal.id ? null : signal.id)}
                             className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
                           >
-                            <Edit className="h-4 w-4" />
+                            <SquarePen className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDeleteSignal(signal.id)}
