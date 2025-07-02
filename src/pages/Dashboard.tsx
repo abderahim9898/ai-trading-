@@ -384,6 +384,7 @@ ${jsonData}`;
   };
 
   const selectedPairInfo = TRADING_PAIRS.find(p => p.symbol === selectedPair);
+  const hasReachedDailyLimit = userStats.used_today >= userStats.recommendation_limit;
 
   if (!user) return null;
 
@@ -575,24 +576,26 @@ ${jsonData}`;
                         )}
                       </div>
                       <div className="flex items-center space-x-2">
-                        {/* Copy Full Prompt Button */}
-                        <button
-                          onClick={copyFullPromptToClipboard}
-                          disabled={!marketData || !selectedSchool}
-                          className="flex items-center space-x-1 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-all disabled:opacity-50"
-                        >
-                          {copiedPrompt ? (
-                            <>
-                              <Check className="h-3 w-3" />
-                              <span>Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <FileText className="h-3 w-3" />
-                              <span>Copy Prompt</span>
-                            </>
-                          )}
-                        </button>
+                        {/* Copy Full Prompt Button - Only visible to admins */}
+                        {user.isAdmin && (
+                          <button
+                            onClick={copyFullPromptToClipboard}
+                            disabled={!marketData || !selectedSchool}
+                            className="flex items-center space-x-1 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs font-medium transition-all disabled:opacity-50"
+                          >
+                            {copiedPrompt ? (
+                              <>
+                                <Check className="h-3 w-3" />
+                                <span>Copied!</span>
+                              </>
+                            ) : (
+                              <>
+                                <FileText className="h-3 w-3" />
+                                <span>Copy Prompt</span>
+                              </>
+                            )}
+                          </button>
+                        )}
                         
                         <button
                           onClick={fetchMarketData}
@@ -624,13 +627,18 @@ ${jsonData}`;
                   {!marketData && (
                     <button
                       onClick={fetchMarketData}
-                      disabled={dataLoading}
+                      disabled={dataLoading || hasReachedDailyLimit}
                       className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 sm:py-4 px-6 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm sm:text-base"
                     >
                       {dataLoading ? (
                         <>
                           <Loader className="h-5 w-5 animate-spin" />
                           <span>{t('signal.fetchingData')}</span>
+                        </>
+                      ) : hasReachedDailyLimit ? (
+                        <>
+                          <AlertCircle className="h-5 w-5" />
+                          <span>Daily Limit Reached</span>
                         </>
                       ) : (
                         <>
@@ -643,13 +651,18 @@ ${jsonData}`;
 
                   <button
                     onClick={generateSignal}
-                    disabled={loading || !marketData || userStats.used_today >= userStats.recommendation_limit}
+                    disabled={loading || !marketData || hasReachedDailyLimit}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 sm:py-4 px-6 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm sm:text-base"
                   >
                     {loading ? (
                       <>
                         <Loader className="h-5 w-5 animate-spin" />
                         <span>{t('signal.analyzingMarket')}</span>
+                      </>
+                    ) : hasReachedDailyLimit ? (
+                      <>
+                        <AlertCircle className="h-5 w-5" />
+                        <span>Daily Limit Reached</span>
                       </>
                     ) : (
                       <>
