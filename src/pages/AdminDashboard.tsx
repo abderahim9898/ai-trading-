@@ -409,7 +409,7 @@ const AdminDashboard: React.FC = () => {
               <h1 className="text-3xl font-bold text-white mb-2 flex items-center space-x-3">
                 <Shield className="h-8 w-8 text-yellow-400" />
                 <span>Admin Dashboard</span>
-              </div>
+              </h1>
               <p className="text-gray-300">Manage users, plans, and platform settings</p>
             </div>
             <button
