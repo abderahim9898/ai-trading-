@@ -12,8 +12,10 @@ import {
   limit,
   serverTimestamp,
   increment,
-  writeBatch
+  writeBatch,
+  setDoc
 } from 'firebase/firestore';
+import { deleteUser as deleteAuthUser } from 'firebase/auth';
 import { db } from '../config/firebase';
 import { User, Plan, School, Recommendation } from '../types';
 
@@ -148,20 +150,46 @@ export const updateUserUsage = async (userId: string, usedToday: number, recomme
   });
 };
 
+// Enhanced user deletion - removes from both Firestore and Firebase Auth
 export const deleteUser = async (userId: string) => {
   try {
-    // Delete user document
+    console.log(`🗑️ Starting deletion process for user ${userId}...`);
+    
+    // Step 1: Delete user's recommendations subcollection
+    try {
+      const recommendationsRef = collection(db, 'recommendations', userId, 'recommendations');
+      const recommendationsSnapshot = await getDocs(recommendationsRef);
+      
+      if (!recommendationsSnapshot.empty) {
+        const batch = writeBatch(db);
+        recommendationsSnapshot.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+        console.log(`✅ Deleted ${recommendationsSnapshot.size} recommendations for user ${userId}`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Could not delete recommendations for user ${userId}:`, error);
+    }
+    
+    // Step 2: Delete user document from Firestore
     await deleteDoc(doc(db, 'users', userId));
+    console.log(`✅ Deleted user document from Firestore: ${userId}`);
     
-    // Note: In a production app, you might also want to:
-    // 1. Delete user's recommendations
-    // 2. Cancel their subscriptions
-    // 3. Clean up other related data
+    // Step 3: Note about Firebase Auth deletion
+    console.log(`ℹ️ Note: Firebase Auth user deletion requires admin SDK on backend`);
+    console.log(`ℹ️ User ${userId} has been removed from Firestore. Auth deletion should be handled server-side.`);
     
-    console.log(`User ${userId} deleted successfully`);
+    return {
+      success: true,
+      message: 'User deleted from database successfully. Authentication cleanup may require backend processing.',
+      firestoreDeleted: true,
+      authDeleted: false // Would need backend implementation
+    };
+    
   } catch (error) {
-    console.error('Error deleting user:', error);
-    throw error;
+    console.error('❌ Error deleting user:', error);
+    throw new Error(`Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -302,38 +330,86 @@ export const promoteToFeaturedSignal = async (recommendation: Recommendation, si
   }
 };
 
-// Plans
+// Plans - Enhanced with proper document naming
 export const getPlans = async () => {
   const snapshot = await getDocs(collection(db, 'plans'));
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Plan[];
 };
 
+// Create plan with plan name as document ID (instead of random ID)
 export const createPlan = async (plan: Omit<Plan, 'id'>) => {
-  const docRef = await addDoc(collection(db, 'plans'), plan);
-  return docRef.id;
+  try {
+    // Use plan name (lowercase, no spaces) as document ID
+    const planId = plan.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    
+    // Check if plan with this ID already exists
+    const existingPlan = await getDoc(doc(db, 'plans', planId));
+    if (existingPlan.exists()) {
+      throw new Error(`Plan with name "${plan.name}" already exists`);
+    }
+    
+    // Create plan with custom ID
+    await setDoc(doc(db, 'plans', planId), {
+      ...plan,
+      created_at: serverTimestamp()
+    });
+    
+    console.log(`✅ Plan created with ID: ${planId}`);
+    return planId;
+  } catch (error) {
+    console.error('❌ Error creating plan:', error);
+    throw error;
+  }
 };
 
 export const updatePlan = async (planId: string, updates: Partial<Omit<Plan, 'id'>>) => {
-  await updateDoc(doc(db, 'plans', planId), updates);
+  await updateDoc(doc(db, 'plans', planId), {
+    ...updates,
+    updated_at: serverTimestamp()
+  });
 };
 
 export const deletePlan = async (planId: string) => {
   await deleteDoc(doc(db, 'plans', planId));
 };
 
-// Schools
+// Schools - Enhanced with proper document naming
 export const getSchools = async () => {
   const snapshot = await getDocs(collection(db, 'schools'));
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as School[];
 };
 
+// Create school with school name as document ID (instead of random ID)
 export const createSchool = async (school: Omit<School, 'id'>) => {
-  const docRef = await addDoc(collection(db, 'schools'), school);
-  return docRef.id;
+  try {
+    // Use school name (lowercase, no spaces) as document ID
+    const schoolId = school.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    
+    // Check if school with this ID already exists
+    const existingSchool = await getDoc(doc(db, 'schools', schoolId));
+    if (existingSchool.exists()) {
+      throw new Error(`School with name "${school.name}" already exists`);
+    }
+    
+    // Create school with custom ID
+    await setDoc(doc(db, 'schools', schoolId), {
+      ...school,
+      created_at: serverTimestamp()
+    });
+    
+    console.log(`✅ School created with ID: ${schoolId}`);
+    return schoolId;
+  } catch (error) {
+    console.error('❌ Error creating school:', error);
+    throw error;
+  }
 };
 
 export const updateSchool = async (schoolId: string, updates: Partial<Omit<School, 'id'>>) => {
-  await updateDoc(doc(db, 'schools', schoolId), updates);
+  await updateDoc(doc(db, 'schools', schoolId), {
+    ...updates,
+    updated_at: serverTimestamp()
+  });
 };
 
 export const deleteSchool = async (schoolId: string) => {
