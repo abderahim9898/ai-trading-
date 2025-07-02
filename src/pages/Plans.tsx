@@ -49,6 +49,8 @@ const Plans: React.FC = () => {
   const [paymentSuccess, setPaymentSuccess] = useState<string>('');
   const [paypalReady, setPaypalReady] = useState(false);
   const [showSetupInstructions, setShowSetupInstructions] = useState(false);
+  
+  // Hide debug mode from customers - only show for admins
   const [debugMode, setDebugMode] = useState(false);
   const [configStatus, setConfigStatus] = useState<{
     validPlans: string[];
@@ -69,7 +71,7 @@ const Plans: React.FC = () => {
     try {
       console.log('🔄 Initializing PayPal configuration...');
       
-      // Run debug check
+      // Run debug check (only log to console, don't show to users)
       debugPayPalConfig();
       
       // Test connection
@@ -246,15 +248,15 @@ const Plans: React.FC = () => {
           </div>
         </div>
 
-        {/* Configuration Status Panel */}
-        {process.env.NODE_ENV === 'development' && (
+        {/* Configuration Status Panel - Only show for admins */}
+        {user?.isAdmin && (
           <div className="max-w-4xl mx-auto mb-8">
             <button
               onClick={() => setDebugMode(!debugMode)}
               className="flex items-center space-x-2 text-gray-400 hover:text-white text-sm"
             >
               <Settings className="h-4 w-4" />
-              <span>PayPal Configuration Status</span>
+              <span>PayPal Configuration Status (Admin Only)</span>
               <ChevronDown className={`h-4 w-4 transition-transform ${debugMode ? 'rotate-180' : ''}`} />
             </button>
             
@@ -363,8 +365,8 @@ const Plans: React.FC = () => {
           </div>
         )}
 
-        {/* PayPal Setup Instructions */}
-        {showSetupInstructions && (
+        {/* PayPal Setup Instructions - Only show for admins */}
+        {showSetupInstructions && user?.isAdmin && (
           <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
               <div className="flex items-start space-x-3">
@@ -410,12 +412,14 @@ const Plans: React.FC = () => {
               <>
                 <AlertCircle className="h-4 w-4" />
                 <span className="font-medium">PayPal Configuration Required</span>
-                <button
-                  onClick={initializePayPal}
-                  className="ml-auto text-xs hover:underline"
-                >
-                  Retry Setup
-                </button>
+                {user?.isAdmin && (
+                  <button
+                    onClick={initializePayPal}
+                    className="ml-auto text-xs hover:underline"
+                  >
+                    Retry Setup
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -520,7 +524,11 @@ const Plans: React.FC = () => {
                               return;
                             }
                             if (!isSupported || !paypalReady) {
-                              setShowSetupInstructions(true);
+                              if (user?.isAdmin) {
+                                setShowSetupInstructions(true);
+                              } else {
+                                setPaymentError('Payment system is currently unavailable. Please try again later or contact support.');
+                              }
                               return;
                             }
                             setSelectedPlan(plan);
@@ -543,8 +551,8 @@ const Plans: React.FC = () => {
                             </>
                           ) : !isSupported || !paypalReady ? (
                             <>
-                              <Settings className="h-4 w-4" />
-                              <span>Setup Required</span>
+                              <AlertCircle className="h-4 w-4" />
+                              <span>Temporarily Unavailable</span>
                             </>
                           ) : (
                             <>
@@ -574,7 +582,7 @@ const Plans: React.FC = () => {
                           ) : (
                             <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-4 py-3 rounded-lg flex items-center space-x-2">
                               <AlertCircle className="h-4 w-4" />
-                              <span>PayPal setup required</span>
+                              <span>Payment system unavailable</span>
                             </div>
                           )}
                           
@@ -592,17 +600,6 @@ const Plans: React.FC = () => {
                         </div>
                       )}
                     </>
-                  )}
-
-                  {/* Debug Info for Development */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <div className="mt-4 text-xs text-gray-500 text-center bg-black/20 rounded p-2">
-                      Plan: {plan.id}
-                      <br />
-                      PayPal ID: {plan.paypal_plan_id || 'Not Set'}
-                      <br />
-                      PayPal Support: {isSupported ? '✅' : '❌'}
-                    </div>
                   )}
                 </div>
               </div>
@@ -689,7 +686,10 @@ const Plans: React.FC = () => {
               </div>
             </div>
 
-            <button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold transition-all transform hover:scale-105 flex items-center space-x-2 mx-auto">
+            <button 
+              onClick={() => window.location.href = 'mailto:enterprise@aitrader.com?subject=Enterprise Inquiry'}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold transition-all transform hover:scale-105 flex items-center space-x-2 mx-auto"
+            >
               <span>Contact Sales Team</span>
               <ArrowRight className="h-5 w-5" />
             </button>
@@ -697,6 +697,111 @@ const Plans: React.FC = () => {
         </div>
 
         {/* FAQ Section */}
+        <div className="mt-20">
+          <div className="text-center mb-12">
+            <h3 className="text-2xl font-bold text-white mb-4">
+              Frequently Asked Questions
+            </h3>
+            <p className="text-gray-300 mb-6">
+              Find answers to common questions about our plans and features
+            </p>
+          </div>
+          
+          <div className="max-w-3xl mx-auto space-y-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden">
+              <button
+                onClick={() => setExpandedFAQ(expandedFAQ === 'faq-1' ? null : 'faq-1')}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
+              >
+                <span className="text-white font-semibold">What's the difference between the plans?</span>
+                <ChevronDown
+                  className={`h-5 w-5 text-gray-400 transition-transform ${
+                    expandedFAQ === 'faq-1' ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {expandedFAQ === 'faq-1' && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-300 leading-relaxed">
+                    Our Free plan includes 1 signal per day with basic analysis. The Pro plan offers 5 signals daily with advanced analysis and priority support. The Elite plan provides 15 signals per day, VIP analysis, 24/7 support, custom strategies, and API access for automated trading.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden">
+              <button
+                onClick={() => setExpandedFAQ(expandedFAQ === 'faq-2' ? null : 'faq-2')}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
+              >
+                <span className="text-white font-semibold">Can I cancel my subscription anytime?</span>
+                <ChevronDown
+                  className={`h-5 w-5 text-gray-400 transition-transform ${
+                    expandedFAQ === 'faq-2' ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {expandedFAQ === 'faq-2' && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-300 leading-relaxed">
+                    Yes, you can cancel your subscription at any time from your account settings. Your access will continue until the end of your current billing period, and you won't be charged for the next cycle.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden">
+              <button
+                onClick={() => setExpandedFAQ(expandedFAQ === 'faq-3' ? null : 'faq-3')}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
+              >
+                <span className="text-white font-semibold">Do you offer a money-back guarantee?</span>
+                <ChevronDown
+                  className={`h-5 w-5 text-gray-400 transition-transform ${
+                    expandedFAQ === 'faq-3' ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {expandedFAQ === 'faq-3' && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-300 leading-relaxed">
+                    Yes, we offer a 30-day money-back guarantee for all paid plans. If you're not satisfied with our service within the first 30 days, contact our support team for a full refund.
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden">
+              <button
+                onClick={() => setExpandedFAQ(expandedFAQ === 'faq-4' ? null : 'faq-4')}
+                className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
+              >
+                <span className="text-white font-semibold">How accurate are the AI-generated signals?</span>
+                <ChevronDown
+                  className={`h-5 w-5 text-gray-400 transition-transform ${
+                    expandedFAQ === 'faq-4' ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+              {expandedFAQ === 'faq-4' && (
+                <div className="px-6 pb-4">
+                  <p className="text-gray-300 leading-relaxed">
+                    Our AI signals have shown an average accuracy rate of 87% based on historical performance. However, past performance doesn't guarantee future results. We recommend using proper risk management and never investing more than you can afford to lose.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="text-center mt-8">
+            <Link to="/" className="text-blue-400 hover:text-blue-300 inline-flex items-center space-x-2">
+              <span>View all FAQs</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Contact CTA */}
         <div className="mt-20 text-center">
           <h3 className="text-2xl font-bold text-white mb-4">
             Questions? We're here to help
@@ -705,11 +810,19 @@ const Plans: React.FC = () => {
             Contact our support team for any questions about our plans and features
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg font-medium transition-all border border-white/20">
-              View FAQ
+            <button 
+              onClick={() => window.location.href = 'mailto:support@aitrader.com?subject=Plan Question'}
+              className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg font-medium transition-all border border-white/20 flex items-center justify-center space-x-2"
+            >
+              <Mail className="h-4 w-4" />
+              <span>Email Support</span>
             </button>
-            <button className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg font-medium transition-all border border-white/20">
-              Contact Support
+            <button
+              onClick={() => alert('Live chat feature coming soon!')}
+              className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg font-medium transition-all border border-white/20 flex items-center justify-center space-x-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>Live Chat</span>
             </button>
           </div>
         </div>

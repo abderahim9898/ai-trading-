@@ -29,7 +29,12 @@ import {
   Sparkles,
   Eye,
   Filter,
-  RefreshCw
+  RefreshCw,
+  HelpCircle,
+  ChevronDown,
+  Mail,
+  Phone,
+  MessageCircle
 } from 'lucide-react';
 
 interface FeaturedSignal {
@@ -61,6 +66,12 @@ interface RecentAnalysis {
   };
 }
 
+interface FAQItem {
+  question: string;
+  answer: string;
+  category: 'general' | 'pricing' | 'technical' | 'trading';
+}
+
 const LandingPage: React.FC = () => {
   const { t, isRTL } = useLanguage();
   const { user } = useAuth();
@@ -71,6 +82,8 @@ const LandingPage: React.FC = () => {
   const [currentAnalysisIndex, setCurrentAnalysisIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [analysesLoading, setAnalysesLoading] = useState(true);
+  const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
+  const [selectedFAQCategory, setSelectedFAQCategory] = useState<string>('general');
 
   useEffect(() => {
     loadFeaturedSignals();
@@ -203,6 +216,79 @@ const LandingPage: React.FC = () => {
     }
   ];
 
+  // FAQ Data
+  const faqData: FAQItem[] = [
+    {
+      question: "What is AI Trader and how does it work?",
+      answer: "AI Trader is an advanced trading platform that uses artificial intelligence to analyze market data and generate trading signals. Our AI models process real-time market data, technical indicators, and multiple trading methodologies to provide you with actionable trading recommendations.",
+      category: "general"
+    },
+    {
+      question: "How accurate are the AI-generated signals?",
+      answer: "Our AI signals have shown an average accuracy rate of 87% based on historical performance. However, past performance doesn't guarantee future results. We recommend using proper risk management and never investing more than you can afford to lose.",
+      category: "general"
+    },
+    {
+      question: "What trading schools/methodologies do you offer?",
+      answer: "We offer four main trading methodologies: Technical Analysis (pattern recognition and indicators), Fundamental Analysis (economic data and market trends), Momentum Trading (breakout and trend following), and Swing Trading (multi-day position strategies).",
+      category: "trading"
+    },
+    {
+      question: "Can I cancel my subscription anytime?",
+      answer: "Yes, you can cancel your subscription at any time from your account settings. Your access will continue until the end of your current billing period, and you won't be charged for the next cycle.",
+      category: "pricing"
+    },
+    {
+      question: "What's the difference between the plans?",
+      answer: "Free plan includes 1 signal per day with basic analysis. Pro plan offers 5 signals daily with advanced analysis and priority support. Elite plan provides 15 signals per day, VIP analysis, 24/7 support, custom strategies, and API access.",
+      category: "pricing"
+    },
+    {
+      question: "Do you offer a money-back guarantee?",
+      answer: "Yes, we offer a 30-day money-back guarantee for all paid plans. If you're not satisfied with our service within the first 30 days, contact our support team for a full refund.",
+      category: "pricing"
+    },
+    {
+      question: "Is my payment information secure?",
+      answer: "Absolutely. We use PayPal for all payment processing, which provides bank-level security and buyer protection. We never store your payment information on our servers.",
+      category: "technical"
+    },
+    {
+      question: "Can I use the signals for automated trading?",
+      answer: "Elite plan users have access to our API which can be integrated with automated trading systems. However, we recommend thorough testing and proper risk management when using automated strategies.",
+      category: "technical"
+    },
+    {
+      question: "What markets do you cover?",
+      answer: "We cover major forex pairs (EUR/USD, GBP/USD, etc.), precious metals (Gold, Silver), major stock indices (S&P 500, NASDAQ), and popular cryptocurrencies (Bitcoin, Ethereum).",
+      category: "trading"
+    },
+    {
+      question: "Do you provide trading education?",
+      answer: "Yes, all plans include access to our educational resources, market analysis explanations, and trading methodology guides. Elite users also get access to exclusive webinars and one-on-one strategy sessions.",
+      category: "trading"
+    },
+    {
+      question: "How do I get started?",
+      answer: "Simply sign up for a free account to start with 1 daily signal. You can upgrade to Pro or Elite plans anytime to access more signals and advanced features. No setup fees or long-term commitments required.",
+      category: "general"
+    },
+    {
+      question: "What if I need help or have technical issues?",
+      answer: "Our support team is available 24/7 for Elite users, with priority support for Pro users, and email support for Free users. You can reach us through the contact form, email, or live chat.",
+      category: "technical"
+    }
+  ];
+
+  const faqCategories = [
+    { id: 'general', name: 'General', icon: HelpCircle },
+    { id: 'pricing', name: 'Pricing', icon: DollarSign },
+    { id: 'trading', name: 'Trading', icon: TrendingUp },
+    { id: 'technical', name: 'Technical', icon: Settings }
+  ];
+
+  const filteredFAQs = faqData.filter(faq => faq.category === selectedFAQCategory);
+
   // Handle plan selection - redirect based on auth status
   const handlePlanSelection = (planId: string) => {
     if (user) {
@@ -212,6 +298,20 @@ const LandingPage: React.FC = () => {
       // User not logged in, go to register with plan parameter
       navigate(`/register?plan=${planId}`);
     }
+  };
+
+  // Contact handlers
+  const handleContactEmail = () => {
+    window.location.href = 'mailto:support@aitrader.com?subject=Contact from AI Trader Website';
+  };
+
+  const handleContactPhone = () => {
+    window.location.href = 'tel:+15551234567';
+  };
+
+  const handleLiveChat = () => {
+    // In a real implementation, this would open a chat widget
+    alert('Live chat feature coming soon! Please use email or phone for now.');
   };
 
   const nextSignal = () => {
@@ -401,7 +501,7 @@ const LandingPage: React.FC = () => {
                 className="border-2 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all flex items-center justify-center space-x-2"
               >
                 <Play className="h-5 w-5" />
-                <span>Watch Demo</span>
+                <span>View Plans</span>
               </Link>
             </div>
 
@@ -742,8 +842,96 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* FAQ Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center space-x-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-6 py-3 mb-6">
+              <HelpCircle className="h-5 w-5 text-blue-400" />
+              <span className="text-blue-400 font-semibold">Frequently Asked Questions</span>
+            </div>
+            <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
+              Got Questions? We Have Answers
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Find answers to the most common questions about our AI trading platform
+            </p>
+          </div>
+
+          {/* FAQ Categories */}
+          <div className="flex flex-wrap justify-center gap-4 mb-12">
+            {faqCategories.map((category) => (
+              <button
+                key={category.id}
+                onClick={() => setSelectedFAQCategory(category.id)}
+                className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all ${
+                  selectedFAQCategory === category.id
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                }`}
+              >
+                <category.icon className="h-4 w-4" />
+                <span>{category.name}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* FAQ Items */}
+          <div className="max-w-4xl mx-auto">
+            <div className="space-y-4">
+              {filteredFAQs.map((faq, index) => (
+                <div
+                  key={index}
+                  className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden"
+                >
+                  <button
+                    onClick={() => setExpandedFAQ(expandedFAQ === `${selectedFAQCategory}-${index}` ? null : `${selectedFAQCategory}-${index}`)}
+                    className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors"
+                  >
+                    <span className="text-white font-semibold pr-4">{faq.question}</span>
+                    <ChevronDown
+                      className={`h-5 w-5 text-gray-400 transition-transform flex-shrink-0 ${
+                        expandedFAQ === `${selectedFAQCategory}-${index}` ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                  {expandedFAQ === `${selectedFAQCategory}-${index}` && (
+                    <div className="px-6 pb-4">
+                      <div className="text-gray-300 leading-relaxed">
+                        {faq.answer}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Contact CTA */}
+          <div className="text-center mt-12">
+            <p className="text-gray-300 mb-6">Still have questions?</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                onClick={handleContactEmail}
+                className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+              >
+                <Mail className="h-4 w-4" />
+                <span>Email Support</span>
+              </button>
+              <button
+                onClick={handleLiveChat}
+                className="flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+              >
+                <MessageCircle className="h-4 w-4" />
+                <span>Live Chat</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
@@ -779,7 +967,7 @@ const LandingPage: React.FC = () => {
       </section>
 
       {/* Pricing Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
@@ -872,8 +1060,69 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Contact Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">
+              Get in Touch
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Have questions or need support? Our team is here to help you succeed in your trading journey.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Mail className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Email Support</h3>
+              <p className="text-gray-300 mb-6">Get help via email with detailed responses</p>
+              <button
+                onClick={handleContactEmail}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all w-full"
+              >
+                Send Email
+              </button>
+              <p className="text-gray-400 text-sm mt-3">support@aitrader.com</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <MessageCircle className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Live Chat</h3>
+              <p className="text-gray-300 mb-6">Chat with our support team in real-time</p>
+              <button
+                onClick={handleLiveChat}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all w-full"
+              >
+                Start Chat
+              </button>
+              <p className="text-gray-400 text-sm mt-3">Available 24/7</p>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Phone className="h-8 w-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-4">Phone Support</h3>
+              <p className="text-gray-300 mb-6">Speak directly with our experts</p>
+              <button
+                onClick={handleContactPhone}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all w-full"
+              >
+                Call Now
+              </button>
+              <p className="text-gray-400 text-sm mt-3">+1 (555) 123-4567</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black/20">
         <div className="max-w-4xl mx-auto text-center">
           <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-3xl p-12 border border-blue-500/30">
             <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6">

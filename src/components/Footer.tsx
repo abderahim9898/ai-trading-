@@ -13,11 +13,21 @@ import {
   Shield,
   FileText,
   Cookie,
-  AlertTriangle
+  AlertTriangle,
+  MessageCircle,
+  ExternalLink
 } from 'lucide-react';
 
 const Footer: React.FC = () => {
   const { t } = useLanguage();
+
+  const handleContactEmail = () => {
+    window.location.href = 'mailto:support@aitrader.com?subject=Contact from AI Trader Website';
+  };
+
+  const handleContactPhone = () => {
+    window.location.href = 'tel:+15551234567';
+  };
 
   return (
     <footer className="bg-black/40 backdrop-blur-sm border-t border-white/10">
@@ -26,24 +36,24 @@ const Footer: React.FC = () => {
           
           {/* Company Info */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2">
               <TrendingUp className="h-8 w-8 text-blue-400" />
               <span className="text-xl font-bold text-white">AI Trader</span>
-            </div>
+            </Link>
             <p className="text-gray-300 text-sm leading-relaxed">
               Professional AI-powered trading signals platform trusted by thousands of traders worldwide. Get intelligent market analysis and trading recommendations.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
                 <Twitter className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
                 <Linkedin className="h-5 w-5" />
               </a>
-              <a href="#" className="text-gray-400 hover:text-blue-400 transition-colors">
+              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-blue-400 transition-colors">
                 <Instagram className="h-5 w-5" />
               </a>
             </div>
@@ -74,9 +84,9 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-300 hover:text-white transition-colors text-sm">
-                  API Documentation
-                </a>
+                <Link to="/settings" className="text-gray-300 hover:text-white transition-colors text-sm">
+                  Account Settings
+                </Link>
               </li>
             </ul>
           </div>
@@ -116,17 +126,36 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-white font-semibold mb-4">Contact Us</h3>
             <ul className="space-y-3">
-              <li className="flex items-center space-x-2 text-gray-300 text-sm">
-                <Mail className="h-4 w-4 text-blue-400" />
-                <span>support@aitrader.com</span>
+              <li>
+                <button
+                  onClick={handleContactEmail}
+                  className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm"
+                >
+                  <Mail className="h-4 w-4 text-blue-400" />
+                  <span>support@aitrader.com</span>
+                </button>
               </li>
-              <li className="flex items-center space-x-2 text-gray-300 text-sm">
-                <Phone className="h-4 w-4 text-blue-400" />
-                <span>+1 (555) 123-4567</span>
+              <li>
+                <button
+                  onClick={handleContactPhone}
+                  className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm"
+                >
+                  <Phone className="h-4 w-4 text-blue-400" />
+                  <span>+1 (555) 123-4567</span>
+                </button>
               </li>
               <li className="flex items-start space-x-2 text-gray-300 text-sm">
                 <MapPin className="h-4 w-4 text-blue-400 mt-0.5" />
                 <span>123 Trading Street<br />Financial District<br />New York, NY 10001</span>
+              </li>
+              <li>
+                <button
+                  onClick={() => alert('Live chat feature coming soon!')}
+                  className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm"
+                >
+                  <MessageCircle className="h-4 w-4 text-green-400" />
+                  <span>Live Chat Support</span>
+                </button>
               </li>
             </ul>
             
