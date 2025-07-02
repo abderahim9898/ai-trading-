@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { LanguageProvider } from './contexts/LanguageContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import LiveChat from './components/LiveChat';
 
 // Public pages
 import LandingPage from './pages/LandingPage';
@@ -92,6 +93,9 @@ function App() {
             />
           </Route>
         </Routes>
+        
+        {/* Live Chat Component - Available on all pages */}
+        <LiveChat />
       </Router>
     </LanguageProvider>
   );

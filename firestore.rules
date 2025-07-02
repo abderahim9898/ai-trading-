@@ -34,5 +34,21 @@ service cloud.firestore {
     match /admin/{document=**} {
       allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
+    
+    // Chat system rules
+    match /chats/{chatId} {
+      // Users can read/write their own chats
+      allow read, write: if request.auth.uid == resource.data.userId;
+      // Admins can read/write all chats
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      
+      // Chat messages
+      match /messages/{messageId} {
+        // Users can read/write messages in their own chats
+        allow read, write: if get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+        // Admins can read/write all messages
+        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      }
+    }
   }
 }

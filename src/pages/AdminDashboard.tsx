@@ -21,6 +21,7 @@ import {
 } from '../services/firestore';
 import { User, Plan, School, Recommendation } from '../types';
 import DailyResetManager from '../components/DailyResetManager';
+import ChatAdmin from '../components/ChatAdmin';
 import { 
   Shield, 
   Users, 
@@ -46,7 +47,8 @@ import {
   BookOpen,
   Award,
   TrendingDown,
-  Minus
+  Minus,
+  MessageCircle
 } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
@@ -365,6 +367,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'plans', label: 'Plans', icon: Crown },
     { id: 'schools', label: 'Schools', icon: BookOpen },
     { id: 'signals', label: 'Featured Signals', icon: Star },
+    { id: 'chat', label: 'Live Chat', icon: MessageCircle },
     { id: 'reset', label: 'Daily Reset', icon: Clock }
   ];
 
@@ -877,6 +880,15 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'chat' && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-white">Live Chat Management</h3>
+                </div>
+                <ChatAdmin />
               </div>
             )}
 
