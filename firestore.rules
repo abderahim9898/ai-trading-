@@ -37,14 +37,17 @@ service cloud.firestore {
     
     // Chat system rules
     match /chats/{chatId} {
-      // Users can read/write their own chats
-      allow read, write: if request.auth.uid == resource.data.userId;
+      // Users can create new chats where they are the owner
+      allow create: if request.auth.uid == request.resource.data.userId;
+      // Users can read/update/delete their own chats
+      allow read, update, delete: if request.auth.uid == resource.data.userId;
       // Admins can read/write all chats
       allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
       
       // Chat messages
       match /messages/{messageId} {
-        // Users can read/write messages in their own chats
+        // Users can create/read/write messages in their own chats
+        allow create: if get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
         allow read, write: if get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
         // Admins can read/write all messages
         allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
