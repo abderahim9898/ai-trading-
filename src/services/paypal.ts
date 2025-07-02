@@ -44,8 +44,8 @@ export interface PayPalPaymentResponse {
 
 // Plan configurations for PayPal - Updated to handle any plan ID
 export const PAYPAL_PLAN_IDS = {
-  pro: 'P-5ML4271244454362WXNWU5NQ', // Replace with actual PayPal Plan ID
-  elite: 'P-6XL9876543210987YXOWV6PR'  // Replace with actual PayPal Plan ID
+  pro: 'P-06P792050H561492LNBQW6ZA', // Replace with actual PayPal Plan ID
+  elite: 'P-2D270313MK3350614NBQYT3QR'  // Replace with actual PayPal Plan ID
 };
 
 // Plan configurations for PayPal
