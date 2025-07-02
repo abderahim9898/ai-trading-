@@ -42,31 +42,11 @@ export interface PayPalPaymentResponse {
   subscriptionId?: string;
 }
 
-// Plan configurations for PayPal - Updated to handle any plan ID
+// Default Plan IDs for reference (update these with your actual PayPal Plan IDs)
 export const PAYPAL_PLAN_IDS = {
   pro: 'P-06P792050H561492LNBQW6ZA', // Replace with actual PayPal Plan ID
-  elite: 'P-2D270313MK3350614NBQYT3QR'  // Replace with actual PayPal Plan ID
+  elite: 'P-2D270313MK3350614NBQYT3Q'  // This matches your current Elite plan!
 };
-
-// Plan configurations for PayPal
-export const PAYPAL_PLANS = {
-  pro: {
-    id: PAYPAL_PLAN_IDS.pro,
-    name: 'AI Trading Pro Plan',
-    amount: 2999, // $29.99 in cents
-    currency: 'USD',
-    interval: 'monthly' as const,
-    description: 'Professional AI-powered trading signals with 5 signals per day'
-  },
-  elite: {
-    id: PAYPAL_PLAN_IDS.elite,
-    name: 'AI Trading Elite Plan',
-    amount: 9900, // $99.00 in cents
-    currency: 'USD',
-    interval: 'monthly' as const,
-    description: 'Elite AI-powered trading signals with 15 signals per day and VIP features'
-  }
-} as const;
 
 // Validate PayPal configuration
 export const validatePayPalConfig = (): boolean => {
@@ -78,16 +58,35 @@ export const validatePayPalConfig = (): boolean => {
 };
 
 // Check if a plan has valid PayPal configuration
-export const hasValidPayPalPlan = (planId: string): boolean => {
-  // For now, support pro and elite plans regardless of their actual Firestore ID
-  return planId === 'pro' || planId === 'elite';
+// Updated to check the actual plan data from Firestore
+export const hasValidPayPalPlan = (plan: any): boolean => {
+  // If it's just a string (plan ID), we can't determine PayPal support
+  if (typeof plan === 'string') {
+    return false;
+  }
+  
+  // Check if the plan object has a valid paypal_plan_id
+  if (plan && plan.paypal_plan_id && plan.paypal_plan_id.trim() !== '') {
+    return true;
+  }
+  
+  return false;
 };
 
-// Get PayPal plan configuration by plan type
-export const getPayPalPlanConfig = (planId: string) => {
-  if (planId === 'pro') return PAYPAL_PLANS.pro;
-  if (planId === 'elite') return PAYPAL_PLANS.elite;
-  return null;
+// Get PayPal plan configuration from Firestore plan data
+export const getPayPalPlanConfig = (plan: any) => {
+  if (!plan || !plan.paypal_plan_id || plan.paypal_plan_id.trim() === '') {
+    return null;
+  }
+  
+  return {
+    id: plan.paypal_plan_id,
+    name: plan.name || 'Subscription Plan',
+    amount: Math.round((plan.price || 0) * 100), // Convert to cents
+    currency: 'USD',
+    interval: 'monthly' as const,
+    description: plan.name || 'AI Trading Subscription'
+  };
 };
 
 // Load PayPal SDK
@@ -114,15 +113,15 @@ export const loadPayPalSDK = (): Promise<any> => {
 
 // Create a subscription with PayPal
 export const createPayPalSubscription = async (
-  planId: string, 
+  plan: any,
   customerEmail: string, 
   customerName?: string,
   metadata?: Record<string, string>
 ): Promise<PayPalPaymentResponse> => {
-  const plan = getPayPalPlanConfig(planId);
+  const planConfig = getPayPalPlanConfig(plan);
   
-  if (!plan) {
-    throw new Error(`PayPal plan not configured for: ${planId}. Please set up PayPal Plan IDs.`);
+  if (!planConfig) {
+    throw new Error(`PayPal plan not configured for: ${plan.name || plan.id}. Please set up PayPal Plan ID.`);
   }
 
   try {
@@ -133,7 +132,7 @@ export const createPayPalSubscription = async (
       window.paypal.Buttons({
         createSubscription: function(data: any, actions: any) {
           return actions.subscription.create({
-            'plan_id': plan.id,
+            'plan_id': planConfig.id,
             'subscriber': {
               'email_address': customerEmail,
               'name': customerName ? {
@@ -160,8 +159,8 @@ export const createPayPalSubscription = async (
           resolve({
             id: data.subscriptionID,
             status: 'completed',
-            amount: plan.amount,
-            currency: plan.currency,
+            amount: planConfig.amount,
+            currency: planConfig.currency,
             paymentUrl: '',
             subscriptionId: data.subscriptionID
           });
@@ -223,10 +222,10 @@ export const getPayPalSetupInstructions = () => {
       "4. Create subscription plans in PayPal Dashboard:",
       "   • Pro Plan: $29.99/month",
       "   • Elite Plan: $99/month",
-      "5. Copy the Plan IDs from PayPal and update PAYPAL_PLAN_IDS:",
-      "   • Update the plan IDs in src/services/paypal.ts",
-      "   • Replace P-5ML4271244454362WXNWU5NQ with your Pro Plan ID",
-      "   • Replace P-6XL9876543210987YXOWV6PR with your Elite Plan ID",
+      "5. Copy the Plan IDs from PayPal and update your Firestore plans:",
+      "   • Go to Firebase Console → Firestore → plans collection",
+      "   • Update the 'paypal_plan_id' field for each plan",
+      "   • Your Elite plan already has: P-2D270313MK3350614NBQYT3Q",
       "6. Add your Client ID to .env file:",
       "   VITE_PAYPAL_CLIENT_ID=your_client_id",
       "   VITE_PAYPAL_ENVIRONMENT=sandbox (or production)",
@@ -243,14 +242,14 @@ export const debugPayPalConfig = () => {
   console.log('Client ID:', PAYPAL_CLIENT_ID ? `${PAYPAL_CLIENT_ID.substring(0, 10)}...` : 'NOT SET');
   console.log('Environment:', PAYPAL_ENVIRONMENT);
   console.log('Base URL:', PAYPAL_BASE_URL);
-  console.log('Pro Plan ID:', PAYPAL_PLAN_IDS.pro);
-  console.log('Elite Plan ID:', PAYPAL_PLAN_IDS.elite);
-  console.log('Available Plans:', Object.keys(PAYPAL_PLANS));
+  console.log('Reference Plan IDs:');
+  console.log('  Pro Plan ID:', PAYPAL_PLAN_IDS.pro);
+  console.log('  Elite Plan ID:', PAYPAL_PLAN_IDS.elite);
   
   try {
     validatePayPalConfig();
     console.log('✅ Configuration is valid');
-    console.log('⚠️ Note: Update PAYPAL_PLAN_IDS with your actual PayPal Plan IDs');
+    console.log('ℹ️ Note: Plans are now checked individually based on their paypal_plan_id field');
   } catch (error) {
     console.log('❌ Configuration error:', error);
   }

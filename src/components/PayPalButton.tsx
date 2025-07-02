@@ -4,9 +4,7 @@ import { updateUserPlan } from '../services/firestore';
 import { CreditCard, Loader, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface PayPalButtonProps {
-  planId: string;
-  planName: string;
-  price: number;
+  plan: any; // Full plan object from Firestore
   userEmail: string;
   userId: string;
   onSuccess: (paymentData: any) => void;
@@ -15,9 +13,7 @@ interface PayPalButtonProps {
 }
 
 const PayPalButton: React.FC<PayPalButtonProps> = ({
-  planId,
-  planName,
-  price,
+  plan,
   userEmail,
   userId,
   onSuccess,
@@ -36,16 +32,19 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
 
   const initializePayPal = async () => {
     try {
-      console.log(`🔄 Initializing PayPal for ${planName} (${planId})...`);
+      console.log(`🔄 Initializing PayPal for ${plan.name} (${plan.id})...`);
       
       // Check if plan is configured
-      const plan = getPayPalPlanConfig(planId);
-      if (!plan) {
-        console.warn(`⚠️ PayPal plan not configured for: ${planId}`);
+      const planConfig = getPayPalPlanConfig(plan);
+      if (!planConfig) {
+        console.warn(`⚠️ PayPal plan not configured for: ${plan.name}`);
+        console.warn(`PayPal Plan ID: ${plan.paypal_plan_id || 'Not Set'}`);
         setSetupRequired(true);
         setLoading(false);
         return;
       }
+      
+      console.log(`✅ PayPal plan config found:`, planConfig);
       
       await loadPayPalSDK();
       setSdkLoaded(true);
@@ -64,8 +63,8 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   const renderPayPalButtons = () => {
     if (!window.paypal || !paypalRef.current || buttonsRendered.current) return;
 
-    const plan = getPayPalPlanConfig(planId);
-    if (!plan) {
+    const planConfig = getPayPalPlanConfig(plan);
+    if (!planConfig) {
       onError('PayPal plan not configured for this subscription');
       return;
     }
@@ -81,7 +80,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
       },
       createSubscription: function(data: any, actions: any) {
         return actions.subscription.create({
-          'plan_id': plan.id,
+          'plan_id': planConfig.id,
           'subscriber': {
             'email_address': userEmail
           },
@@ -101,11 +100,11 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
           console.log('🎉 PayPal Payment Approved:', data);
           
           // Update user subscription in Firestore
-          await updateUserPlan(userId, planId, data.subscriptionID);
+          await updateUserPlan(userId, plan.id, data.subscriptionID);
           
           onSuccess({
             subscriptionId: data.subscriptionID,
-            planId: planId,
+            planId: plan.id,
             status: 'approved'
           });
           
@@ -146,12 +145,13 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
             <AlertCircle className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
             <div className="text-xs text-yellow-300">
               <p className="font-medium mb-1">PayPal Setup Required</p>
-              <p>This plan ({planId}) needs PayPal configuration.</p>
+              <p>Plan "{plan.name}" needs a PayPal Plan ID.</p>
+              <p className="mt-2">Current PayPal Plan ID: {plan.paypal_plan_id || 'Not Set'}</p>
               <p className="mt-2">Steps to fix:</p>
               <ol className="list-decimal list-inside mt-1 space-y-1">
-                <li>Create PayPal subscription plans</li>
-                <li>Update PAYPAL_PLAN_IDS in the code</li>
-                <li>Add your PayPal Client ID to .env</li>
+                <li>Create PayPal subscription plan</li>
+                <li>Update paypal_plan_id in Firestore</li>
+                <li>Add PayPal Client ID to .env</li>
               </ol>
             </div>
           </div>

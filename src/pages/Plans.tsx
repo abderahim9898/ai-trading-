@@ -79,7 +79,7 @@ const Plans: React.FC = () => {
         validatePayPalConfig();
         setPaypalReady(true);
         setConfigStatus({
-          validPlans: ['pro', 'elite'], // These are the supported plan types
+          validPlans: ['plans-with-paypal-ids'], // Will be updated after plans load
           errors: [],
           lastCheck: new Date()
         });
@@ -106,11 +106,20 @@ const Plans: React.FC = () => {
     try {
       const plansData = await getPlans();
       setPlans(plansData);
+      
+      // Update config status with actual plan support info
+      const validPlans = plansData.filter(p => hasValidPayPalPlan(p));
+      setConfigStatus(prev => ({
+        ...prev,
+        validPlans: validPlans.map(p => p.id)
+      }));
+      
       console.log('📊 Loaded plans:', plansData.map(p => ({ 
         id: p.id, 
         name: p.name, 
         price: p.price,
-        paypal_supported: hasValidPayPalPlan(p.id)
+        paypal_plan_id: p.paypal_plan_id,
+        paypal_supported: hasValidPayPalPlan(p)
       })));
     } catch (error) {
       console.error('Error loading plans:', error);
@@ -257,7 +266,7 @@ const Plans: React.FC = () => {
                     <div className="space-y-2 text-sm">
                       <p>PayPal Ready: {paypalReady ? '✅ YES' : '❌ NO'}</p>
                       <p>Plans Loaded: {plans.length}</p>
-                      <p>Supported Plans: {configStatus.validPlans.length}/2 (pro, elite)</p>
+                      <p>Plans with PayPal IDs: {configStatus.validPlans.length}/{plans.length}</p>
                       {configStatus.lastCheck && (
                         <p>Last Check: {configStatus.lastCheck.toLocaleTimeString()}</p>
                       )}
@@ -268,7 +277,7 @@ const Plans: React.FC = () => {
                     <h3 className="text-blue-400 font-semibold mb-3">📊 Plan Support</h3>
                     <div className="space-y-2 text-sm">
                       {plans.map(plan => {
-                        const isSupported = hasValidPayPalPlan(plan.id);
+                        const isSupported = hasValidPayPalPlan(plan);
                         return (
                           <div key={plan.id} className="flex items-center space-x-2">
                             {isSupported ? (
@@ -277,7 +286,7 @@ const Plans: React.FC = () => {
                               <XSquare className="h-4 w-4 text-red-400" />
                             )}
                             <span className={isSupported ? 'text-green-400' : 'text-red-400'}>
-                              {plan.name}: {isSupported ? 'Supported' : 'Not Supported'}
+                              {plan.name}: {isSupported ? 'Supported' : 'Missing PayPal ID'}
                             </span>
                           </div>
                         );
@@ -287,11 +296,13 @@ const Plans: React.FC = () => {
                 </div>
                 
                 <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                  <h4 className="text-blue-400 font-semibold mb-2">📋 PayPal Plan IDs:</h4>
+                  <h4 className="text-blue-400 font-semibold mb-2">📋 PayPal Plan IDs Found:</h4>
                   <div className="text-sm text-gray-300 space-y-1">
-                    <p>Pro Plan ID: {PAYPAL_PLAN_IDS.pro}</p>
-                    <p>Elite Plan ID: {PAYPAL_PLAN_IDS.elite}</p>
-                    <p className="text-yellow-400 mt-2">⚠️ Update these with your actual PayPal Plan IDs</p>
+                    {plans.map(plan => (
+                      <p key={plan.id}>
+                        {plan.name}: {plan.paypal_plan_id || 'Not Set'}
+                      </p>
+                    ))}
                   </div>
                 </div>
                 
@@ -415,7 +426,7 @@ const Plans: React.FC = () => {
           {plans.map((plan, index) => {
             const badge = getPlanBadge(plan);
             const isCurrentPlan = user?.plan === plan.id;
-            const isSupported = hasValidPayPalPlan(plan.id);
+            const isSupported = hasValidPayPalPlan(plan);
             
             return (
               <div
@@ -553,9 +564,7 @@ const Plans: React.FC = () => {
 
                           {isSupported && paypalReady && user ? (
                             <PayPalButton
-                              planId={plan.id}
-                              planName={plan.name}
-                              price={plan.price}
+                              plan={plan}
                               userEmail={user.email}
                               userId={user.uid}
                               onSuccess={handlePaymentSuccess}
@@ -589,6 +598,8 @@ const Plans: React.FC = () => {
                   {process.env.NODE_ENV === 'development' && (
                     <div className="mt-4 text-xs text-gray-500 text-center bg-black/20 rounded p-2">
                       Plan: {plan.id}
+                      <br />
+                      PayPal ID: {plan.paypal_plan_id || 'Not Set'}
                       <br />
                       PayPal Support: {isSupported ? '✅' : '❌'}
                     </div>
