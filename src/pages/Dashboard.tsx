@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getSchools, saveRecommendation, incrementUserUsage } from '../services/firestore';
-import { doc, getDoc } from 'firebase/firestore';
+import { getSchools, saveRecommendation, canUserGenerateRecommendation } from '../services/firestore';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { generateTradingSignalWithRealData } from '../services/gpt';
 import { fetchMultiTimeframeData, generateMockMultiTimeframeData, TRADING_PAIRS, testApiConnection } from '../services/marketData';
 import { sendTelegramMessage, formatSignalForTelegram } from '../services/telegram';
@@ -32,7 +32,9 @@ import {
   XCircle,
   Copy,
   Check,
-  FileText
+  FileText,
+  Shield,
+  Users
 } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
@@ -53,6 +55,10 @@ const Dashboard: React.FC = () => {
   const [apiStatus, setApiStatus] = useState<'unknown' | 'connected' | 'error'>('unknown');
   const [telegramConfig, setTelegramConfig] = useState<any>(null);
   const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [userStats, setUserStats] = useState({
+    used_today: 0,
+    recommendation_limit: 1
+  });
 
   useEffect(() => {
     loadSchools();
@@ -60,6 +66,23 @@ const Dashboard: React.FC = () => {
     if (user?.plan === 'elite') {
       loadTelegramConfig();
     }
+  }, [user]);
+
+  // Real-time user stats listener
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        setUserStats({
+          used_today: userData.used_today || 0,
+          recommendation_limit: userData.recommendation_limit || 1
+        });
+      }
+    });
+
+    return () => unsubscribe();
   }, [user]);
 
   const loadSchools = async () => {
@@ -258,7 +281,9 @@ ${jsonData}`;
   const generateSignal = async () => {
     if (!user || !selectedSchool) return;
 
-    if (user.used_today >= user.recommendation_limit) {
+    // Check if user can generate recommendation
+    const canGenerate = await canUserGenerateRecommendation(user.uid);
+    if (!canGenerate) {
       setError(t('signal.dailyLimitReached'));
       return;
     }
@@ -286,6 +311,7 @@ ${jsonData}`;
       });
 
       // Save recommendation with structured signal data
+      // This will automatically increment user usage
       await saveRecommendation({
         userId: user.uid,
         school: school.name,
@@ -295,9 +321,6 @@ ${jsonData}`;
         timestamp: new Date().toISOString(),
         signal: result.signal
       });
-
-      // Update user usage
-      await incrementUserUsage(user.uid);
       
       setLastRecommendation(result.analysis);
       setLastSignal(result.signal);
@@ -333,7 +356,8 @@ ${jsonData}`;
   const getPlanIcon = (plan: string) => {
     switch (plan) {
       case 'elite': return <Crown className="h-5 w-5" />;
-      default: return <Zap className="h-5 w-5" />;
+      case 'pro': return <Zap className="h-5 w-5" />;
+      default: return <Shield className="h-5 w-5" />;
     }
   };
 
@@ -367,10 +391,10 @@ ${jsonData}`;
     <div className="min-h-screen py-4 sm:py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2">
             {t('dashboard.title')}
           </h1>
-          <p className="text-gray-300 text-sm sm:text-base">
+          <p className="text-gray-300 text-sm sm:text-base lg:text-lg">
             {t('dashboard.subtitle')}
           </p>
         </div>
@@ -399,7 +423,7 @@ ${jsonData}`;
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Stats Cards */}
+          {/* Stats Cards - Mobile Responsive */}
           <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-white/20">
               <div className="flex items-center justify-between">
@@ -419,7 +443,7 @@ ${jsonData}`;
                 <div>
                   <p className="text-gray-300 text-sm">{t('dashboard.signalsToday')}</p>
                   <p className="text-lg sm:text-2xl font-bold text-white">
-                    {user.used_today} / {user.recommendation_limit}
+                    {userStats.used_today} / {userStats.recommendation_limit}
                   </p>
                 </div>
                 <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-green-400" />
@@ -431,7 +455,7 @@ ${jsonData}`;
                 <div>
                   <p className="text-gray-300 text-sm">{t('dashboard.remaining')}</p>
                   <p className="text-lg sm:text-2xl font-bold text-white">
-                    {user.recommendation_limit - user.used_today}
+                    {userStats.recommendation_limit - userStats.used_today}
                   </p>
                 </div>
                 <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-purple-400" />
@@ -439,9 +463,9 @@ ${jsonData}`;
             </div>
           </div>
 
-          {/* Signal Generator */}
+          {/* Signal Generator - Mobile Responsive */}
           <div className="lg:col-span-2">
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 sm:p-8 border border-white/20">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-6 lg:p-8 border border-white/20">
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6 flex items-center space-x-2">
                 <Activity className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
                 <span>{t('signal.title')}</span>
@@ -542,7 +566,7 @@ ${jsonData}`;
                 {/* Market Data Status */}
                 {marketData && (
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <div className="flex items-center space-x-2">
                         <CheckCircle className="h-4 w-4 text-green-400" />
                         <span className="text-green-400 font-medium">{t('signal.marketDataReady')}</span>
@@ -619,7 +643,7 @@ ${jsonData}`;
 
                   <button
                     onClick={generateSignal}
-                    disabled={loading || !marketData || user.used_today >= user.recommendation_limit}
+                    disabled={loading || !marketData || userStats.used_today >= userStats.recommendation_limit}
                     className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 sm:py-4 px-6 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm sm:text-base"
                   >
                     {loading ? (
@@ -639,7 +663,7 @@ ${jsonData}`;
             </div>
           </div>
 
-          {/* Sidebar */}
+          {/* Sidebar - Mobile Responsive */}
           <div className="space-y-6">
             {/* Upgrade Prompt */}
             <div className="bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-blue-500/30">
@@ -672,13 +696,13 @@ ${jsonData}`;
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-300">{t('stats.dailyLimit')}:</span>
                   <span className="text-white font-semibold">
-                    {user.recommendation_limit}
+                    {userStats.recommendation_limit}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-300">{t('stats.usedToday')}:</span>
                   <span className="text-white font-semibold">
-                    {user.used_today}
+                    {userStats.used_today}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">

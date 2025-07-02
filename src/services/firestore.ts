@@ -11,57 +11,140 @@ import {
   orderBy,
   limit,
   serverTimestamp,
-  increment
+  increment,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { User, Plan, School, Recommendation } from '../types';
 
-// User operations
-export const updateUserPlan = async (userId: string, plan: string, subscriptionId: string) => {
-  const planLimits = {
-    free: 1,
-    pro: 5,
-    elite: 15
-  };
-  
-  await updateDoc(doc(db, 'users', userId), {
-    plan,
-    subscriptionId,
-    recommendation_limit: planLimits[plan as keyof typeof planLimits]
-  });
+// User operations with improved plan updates
+export const updateUserPlan = async (userId: string, planId: string, subscriptionId: string) => {
+  try {
+    // Get the plan details first
+    const planDoc = await getDoc(doc(db, 'plans', planId));
+    if (!planDoc.exists()) {
+      throw new Error('Plan not found');
+    }
+    
+    const planData = planDoc.data();
+    const recommendationLimit = planData.recommendations_per_day || 1;
+    
+    console.log(`🔄 Updating user ${userId} to plan ${planId} with ${recommendationLimit} daily recommendations`);
+    
+    // Update user with new plan and reset daily usage
+    await updateDoc(doc(db, 'users', userId), {
+      plan: planId,
+      subscriptionId,
+      recommendation_limit: recommendationLimit,
+      used_today: 0, // Reset usage when plan changes
+      plan_updated_at: serverTimestamp()
+    });
+    
+    console.log(`✅ User plan updated successfully`);
+  } catch (error) {
+    console.error('❌ Error updating user plan:', error);
+    throw error;
+  }
 };
 
 export const incrementUserUsage = async (userId: string) => {
-  await updateDoc(doc(db, 'users', userId), {
-    used_today: increment(1)
-  });
+  try {
+    console.log(`📊 Incrementing usage for user ${userId}`);
+    
+    await updateDoc(doc(db, 'users', userId), {
+      used_today: increment(1),
+      last_recommendation_at: serverTimestamp()
+    });
+    
+    console.log(`✅ User usage incremented`);
+  } catch (error) {
+    console.error('❌ Error incrementing user usage:', error);
+    throw error;
+  }
 };
 
+// Daily usage reset function (should be called by a scheduled function)
 export const resetDailyUsage = async (userId: string) => {
-  await updateDoc(doc(db, 'users', userId), {
-    used_today: 0
-  });
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      used_today: 0,
+      daily_reset_at: serverTimestamp()
+    });
+    console.log(`✅ Daily usage reset for user ${userId}`);
+  } catch (error) {
+    console.error('❌ Error resetting daily usage:', error);
+    throw error;
+  }
+};
+
+// Reset all users' daily usage (admin function)
+export const resetAllUsersDaily = async () => {
+  try {
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    const batch = writeBatch(db);
+    
+    usersSnapshot.docs.forEach((userDoc) => {
+      batch.update(userDoc.ref, {
+        used_today: 0,
+        daily_reset_at: serverTimestamp()
+      });
+    });
+    
+    await batch.commit();
+    console.log(`✅ Daily usage reset for all users`);
+  } catch (error) {
+    console.error('❌ Error resetting all users daily usage:', error);
+    throw error;
+  }
+};
+
+// Check if user can generate recommendation
+export const canUserGenerateRecommendation = async (userId: string): Promise<boolean> => {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (!userDoc.exists()) {
+      return false;
+    }
+    
+    const userData = userDoc.data();
+    return userData.used_today < userData.recommendation_limit;
+  } catch (error) {
+    console.error('Error checking user recommendation limit:', error);
+    return false;
+  }
 };
 
 // Admin user management functions
-export const updateUserPlanAdmin = async (userId: string, plan: string) => {
-  const planLimits = {
-    free: 1,
-    pro: 5,
-    elite: 15
-  };
-  
-  await updateDoc(doc(db, 'users', userId), {
-    plan,
-    recommendation_limit: planLimits[plan as keyof typeof planLimits],
-    used_today: 0 // Reset usage when changing plan
-  });
+export const updateUserPlanAdmin = async (userId: string, planId: string) => {
+  try {
+    // Get the plan details
+    const planDoc = await getDoc(doc(db, 'plans', planId));
+    if (!planDoc.exists()) {
+      throw new Error('Plan not found');
+    }
+    
+    const planData = planDoc.data();
+    const recommendationLimit = planData.recommendations_per_day || 1;
+    
+    await updateDoc(doc(db, 'users', userId), {
+      plan: planId,
+      recommendation_limit: recommendationLimit,
+      used_today: 0, // Reset usage when changing plan
+      admin_updated_at: serverTimestamp()
+    });
+    
+    console.log(`✅ Admin updated user ${userId} to plan ${planId}`);
+  } catch (error) {
+    console.error('❌ Error updating user plan (admin):', error);
+    throw error;
+  }
 };
 
 export const updateUserUsage = async (userId: string, usedToday: number, recommendationLimit: number) => {
   await updateDoc(doc(db, 'users', userId), {
     used_today: usedToday,
-    recommendation_limit: recommendationLimit
+    recommendation_limit: recommendationLimit,
+    admin_usage_updated_at: serverTimestamp()
   });
 };
 
@@ -82,17 +165,33 @@ export const deleteUser = async (userId: string) => {
   }
 };
 
-// Recommendations - Fixed to match security rules path structure
+// Enhanced recommendation saving with proper usage tracking
 export const saveRecommendation = async (recommendation: Omit<Recommendation, 'id'>) => {
-  const { userId } = recommendation;
-  
-  // Create a document in the path: /recommendations/{userId}/recommendations/{autoId}
-  // This matches the security rule: /recommendations/{userId}/{document=**}
-  const docRef = await addDoc(collection(db, 'recommendations', userId, 'recommendations'), {
-    ...recommendation,
-    timestamp: serverTimestamp()
-  });
-  return docRef.id;
+  try {
+    const { userId } = recommendation;
+    
+    // Check if user can generate recommendation
+    const canGenerate = await canUserGenerateRecommendation(userId);
+    if (!canGenerate) {
+      throw new Error('Daily recommendation limit reached');
+    }
+    
+    // Save recommendation
+    const docRef = await addDoc(collection(db, 'recommendations', userId, 'recommendations'), {
+      ...recommendation,
+      timestamp: serverTimestamp(),
+      created_at: serverTimestamp()
+    });
+    
+    // Increment user usage
+    await incrementUserUsage(userId);
+    
+    console.log(`✅ Recommendation saved and usage updated for user ${userId}`);
+    return docRef.id;
+  } catch (error) {
+    console.error('❌ Error saving recommendation:', error);
+    throw error;
+  }
 };
 
 export const getUserRecommendations = async (userId: string, limitCount = 10) => {

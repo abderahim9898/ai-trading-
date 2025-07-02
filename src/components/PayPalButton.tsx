@@ -31,10 +31,10 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   }, []);
 
   useEffect(() => {
-  if (sdkLoaded && paypalRef.current && !buttonsRendered.current) {
-    renderPayPalButtons();
-  }
-}, [sdkLoaded]);
+    if (sdkLoaded && paypalRef.current && !buttonsRendered.current) {
+      renderPayPalButtons();
+    }
+  }, [sdkLoaded]);
 
   const initializePayPal = async () => {
     try {
@@ -64,7 +64,6 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
     } finally {
       setLoading(false);
     }
-    
   };
 
   const renderPayPalButtons = () => {
@@ -106,7 +105,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
         try {
           console.log('🎉 PayPal Payment Approved:', data);
           
-          // Update user subscription in Firestore
+          // Update user subscription in Firestore with proper plan ID
           await updateUserPlan(userId, plan.id, data.subscriptionID);
           
           onSuccess({

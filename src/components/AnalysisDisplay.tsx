@@ -17,7 +17,10 @@ import {
   Settings,
   ExternalLink,
   MessageSquare,
-  FileText
+  FileText,
+  Activity,
+  TrendingUpIcon,
+  Zap
 } from 'lucide-react';
 
 interface AnalysisDisplayProps {
@@ -74,25 +77,46 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
     const sections = text.split(/\n\n+/);
     return sections.map((section, index) => {
       // Check if section is a header (contains specific keywords)
-      const isHeader = /^(SIGNAL SUMMARY|MARKET ANALYSIS|RECOMMENDATION|CONCLUSION|RISK ASSESSMENT):/i.test(section);
+      const isHeader = /^(SIGNAL SUMMARY|MARKET ANALYSIS|RECOMMENDATION|CONCLUSION|RISK ASSESSMENT|TECHNICAL ANALYSIS|FUNDAMENTAL ANALYSIS):/i.test(section);
       
       if (isHeader) {
         const [title, ...content] = section.split(':');
         return (
-          <div key={index} className="mb-4">
-            <h3 className="text-blue-400 font-semibold text-lg mb-2 flex items-center space-x-2">
-              <BarChart3 className="h-4 w-4" />
+          <div key={index} className="mb-6">
+            <h2 className="text-xl md:text-2xl font-bold text-blue-400 mb-3 flex items-center space-x-2 border-b border-blue-400/20 pb-2">
+              <BarChart3 className="h-5 w-5 md:h-6 md:w-6" />
               <span>{title.trim()}</span>
-            </h3>
-            <div className="text-gray-300 leading-relaxed">
+            </h2>
+            <div className="text-gray-300 leading-relaxed text-sm md:text-base">
               {content.join(':').trim()}
             </div>
           </div>
         );
       }
       
+      // Check for sub-headers (numbered sections or bullet points)
+      const isSubHeader = /^(\d+\.|•|\-)\s*[A-Z][^.]*:/.test(section.trim());
+      
+      if (isSubHeader) {
+        const lines = section.split('\n');
+        const headerLine = lines[0];
+        const contentLines = lines.slice(1);
+        
+        return (
+          <div key={index} className="mb-4">
+            <h3 className="text-lg md:text-xl font-semibold text-white mb-2 flex items-center space-x-2">
+              <Activity className="h-4 w-4 md:h-5 md:w-5 text-purple-400" />
+              <span>{headerLine.trim()}</span>
+            </h3>
+            <div className="text-gray-300 leading-relaxed ml-6 text-sm md:text-base">
+              {contentLines.join('\n').trim()}
+            </div>
+          </div>
+        );
+      }
+      
       return (
-        <div key={index} className="mb-4 text-gray-300 leading-relaxed">
+        <div key={index} className="mb-4 text-gray-300 leading-relaxed text-sm md:text-base">
           {section.trim()}
         </div>
       );
@@ -190,64 +214,71 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
   const riskReward = calculateRiskReward();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Signal Summary Card */}
       {signal && (
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className={`px-4 py-2 rounded-full text-sm font-medium border flex items-center space-x-2 ${getSignalTypeColor(signal.type)}`}>
+        <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-4 md:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between mb-4 md:mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-4 lg:mb-0">
+              <div className={`px-3 py-2 rounded-full text-sm font-medium border flex items-center justify-center space-x-2 ${getSignalTypeColor(signal.type)} w-fit`}>
                 {getSignalTypeIcon(signal.type)}
                 <span className="uppercase font-bold">{signal.type}</span>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-white">{signal.pair}</h2>
-                <p className="text-gray-400 text-sm">{school} • {timestamp?.toLocaleString()}</p>
+              <div className="text-center sm:text-left">
+                <h1 className="text-2xl md:text-3xl font-bold text-white">{signal.pair}</h1>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 text-sm text-gray-300 mt-1">
+                  <div className="flex items-center justify-center sm:justify-start space-x-2">
+                    <Clock className="h-4 w-4" />
+                    <span>{timestamp?.toLocaleString()}</span>
+                  </div>
+                  <span className="hidden sm:inline">•</span>
+                  <span className="text-center sm:text-left">{school}</span>
+                </div>
               </div>
             </div>
             
             {signal.probability && (
-              <div className="text-right">
-                <div className="text-3xl font-bold text-blue-400">{signal.probability}%</div>
+              <div className="text-center lg:text-right">
+                <div className="text-3xl md:text-4xl font-bold text-blue-400">{signal.probability}%</div>
                 <div className="text-gray-400 text-sm">Confidence</div>
               </div>
             )}
           </div>
 
-          {/* Signal Metrics Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+          {/* Signal Metrics Grid - Responsive */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-4 md:mb-6">
             {signal.entry && (
-              <div className="bg-black/20 rounded-lg p-4 text-center">
+              <div className="bg-black/20 rounded-lg p-3 md:p-4 text-center">
                 <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Entry Price</div>
-                <div className="text-white font-bold text-lg">{signal.entry}</div>
+                <div className="text-white font-bold text-sm md:text-lg">{signal.entry}</div>
               </div>
             )}
             
             {signal.stopLoss && (
-              <div className="bg-black/20 rounded-lg p-4 text-center">
+              <div className="bg-black/20 rounded-lg p-3 md:p-4 text-center">
                 <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Stop Loss</div>
-                <div className="text-red-400 font-bold text-lg">{signal.stopLoss}</div>
+                <div className="text-red-400 font-bold text-sm md:text-lg">{signal.stopLoss}</div>
               </div>
             )}
             
             {signal.takeProfit1 && (
-              <div className="bg-black/20 rounded-lg p-4 text-center">
+              <div className="bg-black/20 rounded-lg p-3 md:p-4 text-center">
                 <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Take Profit 1</div>
-                <div className="text-green-400 font-bold text-lg">{signal.takeProfit1}</div>
+                <div className="text-green-400 font-bold text-sm md:text-lg">{signal.takeProfit1}</div>
               </div>
             )}
             
             {signal.takeProfit2 && (
-              <div className="bg-black/20 rounded-lg p-4 text-center">
+              <div className="bg-black/20 rounded-lg p-3 md:p-4 text-center">
                 <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Take Profit 2</div>
-                <div className="text-green-400 font-bold text-lg">{signal.takeProfit2}</div>
+                <div className="text-green-400 font-bold text-sm md:text-lg">{signal.takeProfit2}</div>
               </div>
             )}
             
             {riskReward && (
-              <div className="bg-black/20 rounded-lg p-4 text-center">
+              <div className="bg-black/20 rounded-lg p-3 md:p-4 text-center col-span-2 sm:col-span-1">
                 <div className="text-gray-400 text-xs uppercase tracking-wide mb-1">Risk:Reward</div>
-                <div className="text-purple-400 font-bold text-lg">1:{riskReward.ratio}</div>
+                <div className="text-purple-400 font-bold text-sm md:text-lg">1:{riskReward.ratio}</div>
               </div>
             )}
           </div>
@@ -259,16 +290,16 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
                 <AlertTriangle className="h-4 w-4 text-purple-400" />
                 <span className="text-purple-400 font-semibold">Risk Assessment</span>
               </div>
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                <div className="text-center sm:text-left">
                   <span className="text-gray-400">Risk: </span>
                   <span className="text-red-400 font-semibold">{riskReward.risk} pips</span>
                 </div>
-                <div>
+                <div className="text-center sm:text-left">
                   <span className="text-gray-400">Reward: </span>
                   <span className="text-green-400 font-semibold">{riskReward.reward} pips</span>
                 </div>
-                <div>
+                <div className="text-center sm:text-left">
                   <span className="text-gray-400">R:R Ratio: </span>
                   <span className="text-purple-400 font-semibold">1:{riskReward.ratio}</span>
                 </div>
@@ -279,28 +310,28 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
       )}
 
       {/* Professional Analysis Display */}
-      <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-4 md:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6 space-y-3 sm:space-y-0">
           <div className="flex items-center space-x-3">
             <BarChart3 className="h-6 w-6 text-blue-400" />
-            <h3 className="text-xl font-semibold text-white">Professional Analysis</h3>
+            <h1 className="text-xl md:text-2xl font-bold text-white">Professional Analysis</h1>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
             {/* Copy Analysis Button */}
             <button
               onClick={copyToClipboard}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all"
+              className="flex items-center space-x-2 px-3 md:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all text-sm"
             >
               {copied ? (
                 <>
                   <Check className="h-4 w-4" />
-                  <span>Copied!</span>
+                  <span className="hidden sm:inline">Copied!</span>
                 </>
               ) : (
                 <>
                   <Copy className="h-4 w-4" />
-                  <span>Copy Analysis</span>
+                  <span className="hidden sm:inline">Copy</span>
                 </>
               )}
             </button>
@@ -309,17 +340,17 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
             {prompt && (
               <button
                 onClick={copyPromptToClipboard}
-                className="flex items-center space-x-2 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all"
+                className="flex items-center space-x-2 px-3 md:px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-all text-sm"
               >
                 {copiedPrompt ? (
                   <>
                     <Check className="h-4 w-4" />
-                    <span>Copied!</span>
+                    <span className="hidden sm:inline">Copied!</span>
                   </>
                 ) : (
                   <>
                     <FileText className="h-4 w-4" />
-                    <span>Copy Prompt</span>
+                    <span className="hidden sm:inline">Prompt</span>
                   </>
                 )}
               </button>
@@ -330,22 +361,22 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
               <button
                 onClick={sendToTelegram}
                 disabled={sendingToTelegram}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all disabled:opacity-50"
+                className="flex items-center space-x-2 px-3 md:px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-medium transition-all disabled:opacity-50 text-sm"
               >
                 {sendingToTelegram ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Sending...</span>
+                    <span className="hidden sm:inline">Sending...</span>
                   </>
                 ) : telegramSent ? (
                   <>
                     <Check className="h-4 w-4" />
-                    <span>Sent!</span>
+                    <span className="hidden sm:inline">Sent!</span>
                   </>
                 ) : (
                   <>
                     <Send className="h-4 w-4" />
-                    <span>Send to Telegram</span>
+                    <span className="hidden sm:inline">Telegram</span>
                   </>
                 )}
               </button>
@@ -355,23 +386,23 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
             {user?.plan !== 'elite' && (
               <div className="flex items-center space-x-2 px-3 py-2 bg-purple-500/20 border border-purple-500/30 rounded-lg">
                 <Crown className="h-4 w-4 text-purple-400" />
-                <span className="text-purple-400 text-sm font-medium">Elite Feature</span>
+                <span className="text-purple-400 text-xs font-medium hidden sm:inline">Elite Feature</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Analysis Content */}
-        <div className="bg-black/20 rounded-lg p-6">
+        {/* Analysis Content with Professional Typography */}
+        <div className="bg-black/20 rounded-lg p-4 md:p-6">
           <div className="prose prose-invert max-w-none">
             {formatAnalysisForDisplay(analysis)}
           </div>
         </div>
 
         {/* Analysis Metadata */}
-        <div className="mt-6 pt-4 border-t border-white/20">
-          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-gray-400">
-            <div className="flex items-center space-x-4">
+        <div className="mt-4 md:mt-6 pt-4 border-t border-white/20">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-sm text-gray-400">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
               <div className="flex items-center space-x-2">
                 <Clock className="h-4 w-4" />
                 <span>Generated: {timestamp?.toLocaleString() || new Date().toLocaleString()}</span>
@@ -383,7 +414,7 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
             </div>
             
             <div className="flex items-center space-x-2 text-blue-400">
-              <MessageSquare className="h-4 w-4" />
+              <Zap className="h-4 w-4" />
               <span>AI-Powered Analysis</span>
             </div>
           </div>
@@ -392,9 +423,9 @@ const AnalysisDisplay: React.FC<AnalysisDisplayProps> = ({
 
       {/* Telegram Setup Notice for Elite Users */}
       {user?.plan === 'elite' && !onSendToTelegram && (
-        <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6">
+        <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 md:p-6">
           <div className="flex items-start space-x-3">
-            <Crown className="h-6 w-6 text-purple-400 mt-1" />
+            <Crown className="h-6 w-6 text-purple-400 mt-1 flex-shrink-0" />
             <div className="flex-1">
               <h3 className="text-purple-400 font-semibold mb-2">Elite Feature: Telegram Integration</h3>
               <p className="text-gray-300 text-sm mb-4">
