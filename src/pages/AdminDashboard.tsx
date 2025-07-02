@@ -42,7 +42,11 @@ import {
   AlertCircle,
   CheckCircle,
   Star,
-  Target
+  Target,
+  BookOpen,
+  Award,
+  TrendingDown,
+  Minus
 } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
@@ -59,8 +63,34 @@ const AdminDashboard: React.FC = () => {
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<string | null>(null);
   const [editingSchool, setEditingSchool] = useState<string | null>(null);
-  const [newPlan, setNewPlan] = useState<Partial<Plan>>({});
-  const [newSchool, setNewSchool] = useState<Partial<School>>({});
+  const [editingSignal, setEditingSignal] = useState<string | null>(null);
+  const [newPlan, setNewPlan] = useState<Partial<Plan>>({
+    name: '',
+    price: 0,
+    recommendations_per_day: 1,
+    features: [],
+    paypal_plan_id: '',
+    popular: false
+  });
+  const [newSchool, setNewSchool] = useState<Partial<School>>({
+    name: '',
+    prompt: '',
+    active: true
+  });
+  const [newSignal, setNewSignal] = useState<any>({
+    pair: '',
+    type: 'buy',
+    entry: 0,
+    stopLoss: 0,
+    takeProfit1: 0,
+    takeProfit2: 0,
+    probability: 85,
+    result: 'profit',
+    profitPips: 0,
+    date: new Date().toISOString().split('T')[0],
+    school: '',
+    featured: true
+  });
 
   useEffect(() => {
     if (user?.isAdmin) {
@@ -122,6 +152,140 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleCreatePlan = async () => {
+    try {
+      if (!newPlan.name || newPlan.price === undefined) {
+        alert('Please fill in all required fields');
+        return;
+      }
+      
+      await createPlan(newPlan as Omit<Plan, 'id'>);
+      setNewPlan({
+        name: '',
+        price: 0,
+        recommendations_per_day: 1,
+        features: [],
+        paypal_plan_id: '',
+        popular: false
+      });
+      await loadAllData();
+    } catch (error) {
+      console.error('Error creating plan:', error);
+      alert('Error creating plan: ' + (error as Error).message);
+    }
+  };
+
+  const handleUpdatePlan = async (planId: string, updates: Partial<Plan>) => {
+    try {
+      await updatePlan(planId, updates);
+      setEditingPlan(null);
+      await loadAllData();
+    } catch (error) {
+      console.error('Error updating plan:', error);
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    if (!confirm('Are you sure you want to delete this plan?')) return;
+    
+    try {
+      await deletePlan(planId);
+      await loadAllData();
+    } catch (error) {
+      console.error('Error deleting plan:', error);
+    }
+  };
+
+  const handleCreateSchool = async () => {
+    try {
+      if (!newSchool.name || !newSchool.prompt) {
+        alert('Please fill in all required fields');
+        return;
+      }
+      
+      await createSchool(newSchool as Omit<School, 'id'>);
+      setNewSchool({
+        name: '',
+        prompt: '',
+        active: true
+      });
+      await loadAllData();
+    } catch (error) {
+      console.error('Error creating school:', error);
+      alert('Error creating school: ' + (error as Error).message);
+    }
+  };
+
+  const handleUpdateSchool = async (schoolId: string, updates: Partial<School>) => {
+    try {
+      await updateSchool(schoolId, updates);
+      setEditingSchool(null);
+      await loadAllData();
+    } catch (error) {
+      console.error('Error updating school:', error);
+    }
+  };
+
+  const handleDeleteSchool = async (schoolId: string) => {
+    if (!confirm('Are you sure you want to delete this school?')) return;
+    
+    try {
+      await deleteSchool(schoolId);
+      await loadAllData();
+    } catch (error) {
+      console.error('Error deleting school:', error);
+    }
+  };
+
+  const handleCreateSignal = async () => {
+    try {
+      if (!newSignal.pair || !newSignal.school) {
+        alert('Please fill in all required fields');
+        return;
+      }
+      
+      await saveFeaturedSignal(newSignal);
+      setNewSignal({
+        pair: '',
+        type: 'buy',
+        entry: 0,
+        stopLoss: 0,
+        takeProfit1: 0,
+        takeProfit2: 0,
+        probability: 85,
+        result: 'profit',
+        profitPips: 0,
+        date: new Date().toISOString().split('T')[0],
+        school: '',
+        featured: true
+      });
+      await loadAllData();
+    } catch (error) {
+      console.error('Error creating signal:', error);
+    }
+  };
+
+  const handleUpdateSignal = async (signalId: string, updates: any) => {
+    try {
+      await updateFeaturedSignal(signalId, updates);
+      setEditingSignal(null);
+      await loadAllData();
+    } catch (error) {
+      console.error('Error updating signal:', error);
+    }
+  };
+
+  const handleDeleteSignal = async (signalId: string) => {
+    if (!confirm('Are you sure you want to delete this signal?')) return;
+    
+    try {
+      await deleteFeaturedSignal(signalId);
+      await loadAllData();
+    } catch (error) {
+      console.error('Error deleting signal:', error);
+    }
+  };
+
   const getStats = () => {
     const totalUsers = users.length;
     const activeSubscriptions = users.filter(u => u.plan !== 'free').length;
@@ -149,6 +313,24 @@ const AdminDashboard: React.FC = () => {
       case 'pro': return 'text-blue-400 bg-blue-400/10';
       case 'elite': return 'text-purple-400 bg-purple-400/10';
       default: return 'text-gray-400 bg-gray-400/10';
+    }
+  };
+
+  const getSignalTypeIcon = (type: string) => {
+    switch (type) {
+      case 'buy': return <TrendingUp className="h-4 w-4 text-green-400" />;
+      case 'sell': return <TrendingDown className="h-4 w-4 text-red-400" />;
+      case 'hold': return <Minus className="h-4 w-4 text-yellow-400" />;
+      default: return <Target className="h-4 w-4 text-blue-400" />;
+    }
+  };
+
+  const getSignalTypeColor = (type: string) => {
+    switch (type) {
+      case 'buy': return 'text-green-400 bg-green-400/10 border-green-400/20';
+      case 'sell': return 'text-red-400 bg-red-400/10 border-red-400/20';
+      case 'hold': return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20';
+      default: return 'text-blue-400 bg-blue-400/10 border-blue-400/20';
     }
   };
 
@@ -181,7 +363,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'users', label: 'Users', icon: Users },
     { id: 'plans', label: 'Plans', icon: Crown },
-    { id: 'schools', label: 'Schools', icon: Settings },
+    { id: 'schools', label: 'Schools', icon: BookOpen },
     { id: 'signals', label: 'Featured Signals', icon: Star },
     { id: 'reset', label: 'Daily Reset', icon: Clock }
   ];
@@ -193,7 +375,7 @@ const AdminDashboard: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-2">
             <Shield className="h-8 w-8 text-yellow-400" />
-            <span>Admin Dashboard</span>
+            <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
           </div>
           <p className="text-gray-300">Manage users, plans, and platform settings</p>
         </div>
@@ -388,14 +570,322 @@ const AdminDashboard: React.FC = () => {
               </div>
             )}
 
+            {activeTab === 'plans' && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-white">Plan Management</h3>
+                  <button
+                    onClick={loadAllData}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {/* Create New Plan */}
+                <div className="bg-black/20 rounded-lg p-6 mb-6">
+                  <h4 className="text-lg font-semibold text-white mb-4">Create New Plan</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Plan Name"
+                      value={newPlan.name}
+                      onChange={(e) => setNewPlan({...newPlan, name: e.target.value})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Price"
+                      value={newPlan.price}
+                      onChange={(e) => setNewPlan({...newPlan, price: Number(e.target.value)})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Recommendations per day"
+                      value={newPlan.recommendations_per_day}
+                      onChange={(e) => setNewPlan({...newPlan, recommendations_per_day: Number(e.target.value)})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <input
+                      type="text"
+                      placeholder="PayPal Plan ID"
+                      value={newPlan.paypal_plan_id}
+                      onChange={(e) => setNewPlan({...newPlan, paypal_plan_id: e.target.value})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCreatePlan}
+                    className="mt-4 flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create Plan</span>
+                  </button>
+                </div>
+
+                {/* Plans List */}
+                <div className="space-y-4">
+                  {plans.map((plan) => (
+                    <div key={plan.id} className="bg-black/20 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          {getPlanIcon(plan.id)}
+                          <div>
+                            <h4 className="text-white font-semibold">{plan.name}</h4>
+                            <p className="text-gray-400 text-sm">${plan.price}/month • {plan.recommendations_per_day} signals/day</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setEditingPlan(editingPlan === plan.id ? null : plan.id)}
+                            className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeletePlan(plan.id)}
+                            className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'schools' && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-white">Trading Schools Management</h3>
+                  <button
+                    onClick={loadAllData}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {/* Create New School */}
+                <div className="bg-black/20 rounded-lg p-6 mb-6">
+                  <h4 className="text-lg font-semibold text-white mb-4">Create New Trading School</h4>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="School Name"
+                      value={newSchool.name}
+                      onChange={(e) => setNewSchool({...newSchool, name: e.target.value})}
+                      className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <textarea
+                      placeholder="Trading Prompt"
+                      value={newSchool.prompt}
+                      onChange={(e) => setNewSchool({...newSchool, prompt: e.target.value})}
+                      rows={4}
+                      className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCreateSchool}
+                    className="mt-4 flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create School</span>
+                  </button>
+                </div>
+
+                {/* Schools List */}
+                <div className="space-y-4">
+                  {schools.map((school) => (
+                    <div key={school.id} className="bg-black/20 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <BookOpen className="h-5 w-5 text-blue-400" />
+                          <div>
+                            <h4 className="text-white font-semibold">{school.name}</h4>
+                            <p className="text-gray-400 text-sm">
+                              {school.active ? 'Active' : 'Inactive'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setEditingSchool(editingSchool === school.id ? null : school.id)}
+                            className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSchool(school.id)}
+                            className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-gray-300 text-sm">{school.prompt.substring(0, 200)}...</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'signals' && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-white">Featured Signals Management</h3>
+                  <button
+                    onClick={loadAllData}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span>Refresh</span>
+                  </button>
+                </div>
+
+                {/* Create New Signal */}
+                <div className="bg-black/20 rounded-lg p-6 mb-6">
+                  <h4 className="text-lg font-semibold text-white mb-4">Create New Featured Signal</h4>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <input
+                      type="text"
+                      placeholder="Trading Pair (e.g., XAUUSD)"
+                      value={newSignal.pair}
+                      onChange={(e) => setNewSignal({...newSignal, pair: e.target.value})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <select
+                      value={newSignal.type}
+                      onChange={(e) => setNewSignal({...newSignal, type: e.target.value})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                    >
+                      <option value="buy" className="bg-gray-800">Buy</option>
+                      <option value="sell" className="bg-gray-800">Sell</option>
+                      <option value="hold" className="bg-gray-800">Hold</option>
+                    </select>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Entry Price"
+                      value={newSignal.entry}
+                      onChange={(e) => setNewSignal({...newSignal, entry: Number(e.target.value)})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Stop Loss"
+                      value={newSignal.stopLoss}
+                      onChange={(e) => setNewSignal({...newSignal, stopLoss: Number(e.target.value)})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Take Profit 1"
+                      value={newSignal.takeProfit1}
+                      onChange={(e) => setNewSignal({...newSignal, takeProfit1: Number(e.target.value)})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Probability %"
+                      value={newSignal.probability}
+                      onChange={(e) => setNewSignal({...newSignal, probability: Number(e.target.value)})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <input
+                      type="text"
+                      placeholder="School"
+                      value={newSignal.school}
+                      onChange={(e) => setNewSignal({...newSignal, school: e.target.value})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Profit Pips"
+                      value={newSignal.profitPips}
+                      onChange={(e) => setNewSignal({...newSignal, profitPips: Number(e.target.value)})}
+                      className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white placeholder-gray-400"
+                    />
+                  </div>
+                  <button
+                    onClick={handleCreateSignal}
+                    className="mt-4 flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Create Signal</span>
+                  </button>
+                </div>
+
+                {/* Signals List */}
+                <div className="space-y-4">
+                  {featuredSignals.map((signal) => (
+                    <div key={signal.id} className="bg-black/20 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center space-x-1 ${getSignalTypeColor(signal.type)}`}>
+                            {getSignalTypeIcon(signal.type)}
+                            <span>{signal.type.toUpperCase()}</span>
+                          </div>
+                          <div>
+                            <h4 className="text-white font-semibold">{signal.pair}</h4>
+                            <p className="text-gray-400 text-sm">{signal.school} • {signal.date}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">
+                            +{signal.profitPips} pips
+                          </div>
+                          <button
+                            onClick={() => setEditingSignal(editingSignal === signal.id ? null : signal.id)}
+                            className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSignal(signal.id)}
+                            className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-400">Entry: </span>
+                          <span className="text-white">{signal.entry}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">SL: </span>
+                          <span className="text-red-400">{signal.stopLoss}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">TP: </span>
+                          <span className="text-green-400">{signal.takeProfit1}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Probability: </span>
+                          <span className="text-blue-400">{signal.probability}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {activeTab === 'reset' && (
               <div>
                 <h3 className="text-xl font-semibold text-white mb-6">Daily Usage Reset Management</h3>
                 <DailyResetManager />
               </div>
             )}
-
-            {/* Other tabs would go here... */}
           </div>
         </div>
       </div>
