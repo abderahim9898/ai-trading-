@@ -34,7 +34,8 @@ import {
   ChevronDown,
   Mail,
   Phone,
-  MessageCircle
+  MessageCircle,
+  Settings
 } from 'lucide-react';
 
 interface FeaturedSignal {
