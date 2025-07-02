@@ -39,8 +39,8 @@ service cloud.firestore {
     match /chats/{chatId} {
       // Users can create new chats where they are the owner
       allow create: if request.auth.uid == request.resource.data.userId;
-      // Users can read/update/delete their own chats
-      allow read, update, delete: if request.auth.uid == resource.data.userId;
+      // Users can read/update/delete their own chats - made more robust
+      allow read, update, delete: if request.auth.uid == resource.data.userId && resource.data.userId is string;
       // Admins can read/write all chats
       allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
       
