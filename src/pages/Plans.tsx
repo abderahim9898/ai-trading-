@@ -36,8 +36,11 @@ import {
   RefreshCw,
   CheckSquare,
   XSquare,
-  ChevronDown
+  ChevronDown,
+  Mail,
+  MessageCircle
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Plans: React.FC = () => {
   const { user } = useAuth();
@@ -49,6 +52,7 @@ const Plans: React.FC = () => {
   const [paymentSuccess, setPaymentSuccess] = useState<string>('');
   const [paypalReady, setPaypalReady] = useState(false);
   const [showSetupInstructions, setShowSetupInstructions] = useState(false);
+  const [expandedFAQ, setExpandedFAQ] = useState<string | null>(null);
   
   // Hide debug mode from customers - only show for admins
   const [debugMode, setDebugMode] = useState(false);
