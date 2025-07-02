@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { MessageCircle, X, Send, User, ChevronDown, ChevronUp, Minimize2, Maximize2 } from 'lucide-react';
-import { collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, doc, getDoc, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 
 interface Message {
@@ -319,8 +319,3 @@ const LiveChat: React.FC = () => {
 };
 
 export default LiveChat;
-
-// Helper function for getting Firestore documents with a query
-const getDocs = async (q: any) => {
-  return await q.get();
-};
