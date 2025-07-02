@@ -7,7 +7,7 @@ import {
   getPayPalSetupInstructions,
   debugPayPalConfig,
   testPayPalConnection,
-  PAYPAL_PLANS
+  PAYPAL_PLAN_IDS
 } from '../services/paypal';
 import { Plan } from '../types';
 import PayPalButton from '../components/PayPalButton';
@@ -79,7 +79,7 @@ const Plans: React.FC = () => {
         validatePayPalConfig();
         setPaypalReady(true);
         setConfigStatus({
-          validPlans: Object.keys(PAYPAL_PLANS),
+          validPlans: ['pro', 'elite'], // These are the supported plan types
           errors: [],
           lastCheck: new Date()
         });
@@ -257,7 +257,7 @@ const Plans: React.FC = () => {
                     <div className="space-y-2 text-sm">
                       <p>PayPal Ready: {paypalReady ? '✅ YES' : '❌ NO'}</p>
                       <p>Plans Loaded: {plans.length}</p>
-                      <p>Supported Plans: {configStatus.validPlans.length}/{plans.length}</p>
+                      <p>Supported Plans: {configStatus.validPlans.length}/2 (pro, elite)</p>
                       {configStatus.lastCheck && (
                         <p>Last Check: {configStatus.lastCheck.toLocaleTimeString()}</p>
                       )}
@@ -283,6 +283,15 @@ const Plans: React.FC = () => {
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+                
+                <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <h4 className="text-blue-400 font-semibold mb-2">📋 PayPal Plan IDs:</h4>
+                  <div className="text-sm text-gray-300 space-y-1">
+                    <p>Pro Plan ID: {PAYPAL_PLAN_IDS.pro}</p>
+                    <p>Elite Plan ID: {PAYPAL_PLAN_IDS.elite}</p>
+                    <p className="text-yellow-400 mt-2">⚠️ Update these with your actual PayPal Plan IDs</p>
                   </div>
                 </div>
                 

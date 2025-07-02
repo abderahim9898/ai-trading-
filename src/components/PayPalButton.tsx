@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { loadPayPalSDK, PAYPAL_PLANS } from '../services/paypal';
+import { loadPayPalSDK, getPayPalPlanConfig } from '../services/paypal';
 import { updateUserPlan } from '../services/firestore';
-import { CreditCard, Loader, Shield, CheckCircle } from 'lucide-react';
+import { CreditCard, Loader, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface PayPalButtonProps {
   planId: string;
@@ -26,6 +26,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [sdkLoaded, setSdkLoaded] = useState(false);
+  const [setupRequired, setSetupRequired] = useState(false);
   const paypalRef = useRef<HTMLDivElement>(null);
   const buttonsRendered = useRef(false);
 
@@ -35,7 +36,16 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
 
   const initializePayPal = async () => {
     try {
-      console.log(`🔄 Initializing PayPal for ${planName}...`);
+      console.log(`🔄 Initializing PayPal for ${planName} (${planId})...`);
+      
+      // Check if plan is configured
+      const plan = getPayPalPlanConfig(planId);
+      if (!plan) {
+        console.warn(`⚠️ PayPal plan not configured for: ${planId}`);
+        setSetupRequired(true);
+        setLoading(false);
+        return;
+      }
       
       await loadPayPalSDK();
       setSdkLoaded(true);
@@ -54,9 +64,9 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   const renderPayPalButtons = () => {
     if (!window.paypal || !paypalRef.current || buttonsRendered.current) return;
 
-    const plan = PAYPAL_PLANS[planId as keyof typeof PAYPAL_PLANS];
+    const plan = getPayPalPlanConfig(planId);
     if (!plan) {
-      onError('Invalid subscription plan');
+      onError('PayPal plan not configured for this subscription');
       return;
     }
 
@@ -124,6 +134,38 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
             <span className="text-blue-300 text-sm">Loading PayPal...</span>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (setupRequired) {
+    return (
+      <div className="space-y-4">
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="h-4 w-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-yellow-300">
+              <p className="font-medium mb-1">PayPal Setup Required</p>
+              <p>This plan ({planId}) needs PayPal configuration.</p>
+              <p className="mt-2">Steps to fix:</p>
+              <ol className="list-decimal list-inside mt-1 space-y-1">
+                <li>Create PayPal subscription plans</li>
+                <li>Update PAYPAL_PLAN_IDS in the code</li>
+                <li>Add your PayPal Client ID to .env</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        
+        <button
+          onClick={() => window.open('https://developer.paypal.com', '_blank')}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2"
+        >
+          <span>Setup PayPal Integration</span>
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </button>
       </div>
     );
   }

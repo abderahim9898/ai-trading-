@@ -42,10 +42,16 @@ export interface PayPalPaymentResponse {
   subscriptionId?: string;
 }
 
+// Plan configurations for PayPal - Updated to handle any plan ID
+export const PAYPAL_PLAN_IDS = {
+  pro: 'P-5ML4271244454362WXNWU5NQ', // Replace with actual PayPal Plan ID
+  elite: 'P-6XL9876543210987YXOWV6PR'  // Replace with actual PayPal Plan ID
+};
+
 // Plan configurations for PayPal
 export const PAYPAL_PLANS = {
   pro: {
-    id: 'P-5ML4271244454362WXNWU5NQ', // Replace with actual PayPal Plan ID
+    id: PAYPAL_PLAN_IDS.pro,
     name: 'AI Trading Pro Plan',
     amount: 2999, // $29.99 in cents
     currency: 'USD',
@@ -53,7 +59,7 @@ export const PAYPAL_PLANS = {
     description: 'Professional AI-powered trading signals with 5 signals per day'
   },
   elite: {
-    id: 'P-6XL9876543210987YXOWV6PR', // Replace with actual PayPal Plan ID
+    id: PAYPAL_PLAN_IDS.elite,
     name: 'AI Trading Elite Plan',
     amount: 9900, // $99.00 in cents
     currency: 'USD',
@@ -73,7 +79,15 @@ export const validatePayPalConfig = (): boolean => {
 
 // Check if a plan has valid PayPal configuration
 export const hasValidPayPalPlan = (planId: string): boolean => {
-  return planId in PAYPAL_PLANS;
+  // For now, support pro and elite plans regardless of their actual Firestore ID
+  return planId === 'pro' || planId === 'elite';
+};
+
+// Get PayPal plan configuration by plan type
+export const getPayPalPlanConfig = (planId: string) => {
+  if (planId === 'pro') return PAYPAL_PLANS.pro;
+  if (planId === 'elite') return PAYPAL_PLANS.elite;
+  return null;
 };
 
 // Load PayPal SDK
@@ -105,10 +119,10 @@ export const createPayPalSubscription = async (
   customerName?: string,
   metadata?: Record<string, string>
 ): Promise<PayPalPaymentResponse> => {
-  const plan = PAYPAL_PLANS[planId as keyof typeof PAYPAL_PLANS];
+  const plan = getPayPalPlanConfig(planId);
   
   if (!plan) {
-    throw new Error(`Invalid plan ID: ${planId}`);
+    throw new Error(`PayPal plan not configured for: ${planId}. Please set up PayPal Plan IDs.`);
   }
 
   try {
@@ -205,16 +219,18 @@ export const getPayPalSetupInstructions = () => {
     steps: [
       "1. Create a PayPal Business account at https://paypal.com",
       "2. Go to PayPal Developer Dashboard at https://developer.paypal.com",
-      "3. Create a new application",
-      "4. Get your Client ID from the app credentials",
-      "5. Create subscription plans in PayPal Dashboard:",
+      "3. Create a new application and get your Client ID",
+      "4. Create subscription plans in PayPal Dashboard:",
       "   • Pro Plan: $29.99/month",
       "   • Elite Plan: $99/month",
-      "6. Copy the Plan IDs and update PAYPAL_PLANS in the code",
-      "7. Add your Client ID to .env file:",
+      "5. Copy the Plan IDs from PayPal and update PAYPAL_PLAN_IDS:",
+      "   • Update the plan IDs in src/services/paypal.ts",
+      "   • Replace P-5ML4271244454362WXNWU5NQ with your Pro Plan ID",
+      "   • Replace P-6XL9876543210987YXOWV6PR with your Elite Plan ID",
+      "6. Add your Client ID to .env file:",
       "   VITE_PAYPAL_CLIENT_ID=your_client_id",
       "   VITE_PAYPAL_ENVIRONMENT=sandbox (or production)",
-      "8. Test payments in sandbox mode before going live"
+      "7. Test payments in sandbox mode before going live"
     ],
     note: "PayPal offers secure payment processing with buyer protection and supports multiple payment methods."
   };
@@ -227,11 +243,14 @@ export const debugPayPalConfig = () => {
   console.log('Client ID:', PAYPAL_CLIENT_ID ? `${PAYPAL_CLIENT_ID.substring(0, 10)}...` : 'NOT SET');
   console.log('Environment:', PAYPAL_ENVIRONMENT);
   console.log('Base URL:', PAYPAL_BASE_URL);
+  console.log('Pro Plan ID:', PAYPAL_PLAN_IDS.pro);
+  console.log('Elite Plan ID:', PAYPAL_PLAN_IDS.elite);
   console.log('Available Plans:', Object.keys(PAYPAL_PLANS));
   
   try {
     validatePayPalConfig();
     console.log('✅ Configuration is valid');
+    console.log('⚠️ Note: Update PAYPAL_PLAN_IDS with your actual PayPal Plan IDs');
   } catch (error) {
     console.log('❌ Configuration error:', error);
   }
