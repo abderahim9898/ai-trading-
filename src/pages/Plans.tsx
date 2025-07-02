@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { getPlans, updateUserPlan } from '../services/firestore';
 import { 
-  validatePayComConfig, 
-  hasValidPayComPlan, 
-  getPayComSetupInstructions,
-  debugPayComConfig,
-  testPayComConnection,
-  PAYCOM_PLANS
-} from '../services/paycom';
+  validatePayPalConfig, 
+  hasValidPayPalPlan, 
+  getPayPalSetupInstructions,
+  debugPayPalConfig,
+  testPayPalConnection,
+  PAYPAL_PLANS
+} from '../services/paypal';
 import { Plan } from '../types';
-import PayComButton from '../components/PayComButton';
+import PayPalButton from '../components/PayPalButton';
 import { 
   CheckCircle, 
   Crown, 
@@ -47,7 +47,7 @@ const Plans: React.FC = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string>('');
   const [paymentSuccess, setPaymentSuccess] = useState<string>('');
-  const [payComReady, setPayComReady] = useState(false);
+  const [paypalReady, setPaypalReady] = useState(false);
   const [showSetupInstructions, setShowSetupInstructions] = useState(false);
   const [debugMode, setDebugMode] = useState(false);
   const [configStatus, setConfigStatus] = useState<{
@@ -62,38 +62,38 @@ const Plans: React.FC = () => {
 
   useEffect(() => {
     loadPlans();
-    initializePayCom();
+    initializePayPal();
   }, []);
 
-  const initializePayCom = async () => {
+  const initializePayPal = async () => {
     try {
-      console.log('🔄 Initializing Pay.com configuration...');
+      console.log('🔄 Initializing PayPal configuration...');
       
       // Run debug check
-      debugPayComConfig();
+      debugPayPalConfig();
       
       // Test connection
-      const connectionTest = await testPayComConnection();
+      const connectionTest = await testPayPalConnection();
       
       if (connectionTest) {
-        validatePayComConfig();
-        setPayComReady(true);
+        validatePayPalConfig();
+        setPaypalReady(true);
         setConfigStatus({
-          validPlans: Object.keys(PAYCOM_PLANS),
+          validPlans: Object.keys(PAYPAL_PLANS),
           errors: [],
           lastCheck: new Date()
         });
-        console.log('✅ Pay.com initialization successful!');
+        console.log('✅ PayPal initialization successful!');
         setPaymentError('');
       } else {
-        throw new Error('Failed to connect to Pay.com API');
+        throw new Error('Failed to connect to PayPal SDK');
       }
       
     } catch (error: any) {
-      console.error('❌ Pay.com initialization failed:', error);
-      setPaymentError(`Pay.com Configuration Error: ${error.message}`);
+      console.error('❌ PayPal initialization failed:', error);
+      setPaymentError(`PayPal Configuration Error: ${error.message}`);
       setShowSetupInstructions(true);
-      setPayComReady(false);
+      setPaypalReady(false);
       setConfigStatus({
         validPlans: [],
         errors: [error.message],
@@ -110,7 +110,7 @@ const Plans: React.FC = () => {
         id: p.id, 
         name: p.name, 
         price: p.price,
-        paycom_supported: hasValidPayComPlan(p.id)
+        paypal_supported: hasValidPayPalPlan(p.id)
       })));
     } catch (error) {
       console.error('Error loading plans:', error);
@@ -130,7 +130,7 @@ const Plans: React.FC = () => {
     setPaymentError('');
 
     try {
-      console.log('🎉 Pay.com Payment Success:', paymentData);
+      console.log('🎉 PayPal Payment Success:', paymentData);
       
       // Update user subscription in Firestore
       await updateUserPlan(user.uid, selectedPlan.id, paymentData.subscriptionId || paymentData.id);
@@ -152,7 +152,7 @@ const Plans: React.FC = () => {
   };
 
   const handlePaymentError = (error: string) => {
-    console.error('Pay.com Payment Error:', error);
+    console.error('PayPal Payment Error:', error);
     setPaymentError(error);
     setPaymentLoading(false);
   };
@@ -198,7 +198,7 @@ const Plans: React.FC = () => {
     );
   }
 
-  const setupInstructions = getPayComSetupInstructions();
+  const setupInstructions = getPayPalSetupInstructions();
 
   return (
     <div className="min-h-screen py-16 px-4 sm:px-6 lg:px-8">
@@ -224,7 +224,7 @@ const Plans: React.FC = () => {
           <div className="flex flex-wrap justify-center gap-8 text-sm text-gray-400">
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4 text-green-400" />
-              <span>Secure Pay.com payments</span>
+              <span>Secure PayPal payments</span>
             </div>
             <div className="flex items-center space-x-2">
               <CheckCircle className="h-4 w-4 text-green-400" />
@@ -245,7 +245,7 @@ const Plans: React.FC = () => {
               className="flex items-center space-x-2 text-gray-400 hover:text-white text-sm"
             >
               <Settings className="h-4 w-4" />
-              <span>Pay.com Configuration Status</span>
+              <span>PayPal Configuration Status</span>
               <ChevronDown className={`h-4 w-4 transition-transform ${debugMode ? 'rotate-180' : ''}`} />
             </button>
             
@@ -255,7 +255,7 @@ const Plans: React.FC = () => {
                   <div>
                     <h3 className="text-green-400 font-semibold mb-3">✅ Configuration Status</h3>
                     <div className="space-y-2 text-sm">
-                      <p>Pay.com Ready: {payComReady ? '✅ YES' : '❌ NO'}</p>
+                      <p>PayPal Ready: {paypalReady ? '✅ YES' : '❌ NO'}</p>
                       <p>Plans Loaded: {plans.length}</p>
                       <p>Supported Plans: {configStatus.validPlans.length}/{plans.length}</p>
                       {configStatus.lastCheck && (
@@ -268,7 +268,7 @@ const Plans: React.FC = () => {
                     <h3 className="text-blue-400 font-semibold mb-3">📊 Plan Support</h3>
                     <div className="space-y-2 text-sm">
                       {plans.map(plan => {
-                        const isSupported = hasValidPayComPlan(plan.id);
+                        const isSupported = hasValidPayPalPlan(plan.id);
                         return (
                           <div key={plan.id} className="flex items-center space-x-2">
                             {isSupported ? (
@@ -299,7 +299,7 @@ const Plans: React.FC = () => {
                 
                 <div className="mt-4 flex space-x-3">
                   <button
-                    onClick={initializePayCom}
+                    onClick={initializePayPal}
                     className="text-blue-400 hover:text-blue-300 flex items-center space-x-1 text-sm"
                   >
                     <RefreshCw className="h-3 w-3" />
@@ -343,7 +343,7 @@ const Plans: React.FC = () => {
           </div>
         )}
 
-        {/* Pay.com Setup Instructions */}
+        {/* PayPal Setup Instructions */}
         {showSetupInstructions && (
           <div className="max-w-4xl mx-auto mb-8">
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
@@ -373,25 +373,25 @@ const Plans: React.FC = () => {
           </div>
         )}
 
-        {/* Pay.com Status Banner */}
+        {/* PayPal Status Banner */}
         <div className="max-w-4xl mx-auto mb-8">
           <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg border text-sm ${
-            payComReady 
+            paypalReady 
               ? 'bg-green-500/10 border-green-500/20 text-green-400'
               : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
           }`}>
-            {payComReady ? (
+            {paypalReady ? (
               <>
                 <CheckCircle className="h-4 w-4" />
-                <span className="font-medium">Pay.com Payment System Ready</span>
+                <span className="font-medium">PayPal Payment System Ready</span>
                 <span className="text-xs">• Secure payments enabled</span>
               </>
             ) : (
               <>
                 <AlertCircle className="h-4 w-4" />
-                <span className="font-medium">Pay.com Configuration Required</span>
+                <span className="font-medium">PayPal Configuration Required</span>
                 <button
-                  onClick={initializePayCom}
+                  onClick={initializePayPal}
                   className="ml-auto text-xs hover:underline"
                 >
                   Retry Setup
@@ -406,7 +406,7 @@ const Plans: React.FC = () => {
           {plans.map((plan, index) => {
             const badge = getPlanBadge(plan);
             const isCurrentPlan = user?.plan === plan.id;
-            const isSupported = hasValidPayComPlan(plan.id);
+            const isSupported = hasValidPayPalPlan(plan.id);
             
             return (
               <div
@@ -448,7 +448,7 @@ const Plans: React.FC = () => {
                       </div>
                       {plan.price > 0 && (
                         <p className="text-gray-400 text-sm mt-1">
-                          Billed monthly via Pay.com
+                          Billed monthly via PayPal
                         </p>
                       )}
                     </div>
@@ -499,7 +499,7 @@ const Plans: React.FC = () => {
                               window.location.href = '/login';
                               return;
                             }
-                            if (!isSupported || !payComReady) {
+                            if (!isSupported || !paypalReady) {
                               setShowSetupInstructions(true);
                               return;
                             }
@@ -507,9 +507,9 @@ const Plans: React.FC = () => {
                             setPaymentError('');
                             setPaymentSuccess('');
                           }}
-                          disabled={!isSupported || !payComReady}
+                          disabled={!isSupported || !paypalReady}
                           className={`w-full py-4 px-6 rounded-xl font-semibold transition-all flex items-center justify-center space-x-2 ${
-                            !isSupported || !payComReady
+                            !isSupported || !paypalReady
                               ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                               : plan.popular
                               ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg'
@@ -521,7 +521,7 @@ const Plans: React.FC = () => {
                               <span>Sign In to Subscribe</span>
                               <ExternalLink className="h-4 w-4" />
                             </>
-                          ) : !isSupported || !payComReady ? (
+                          ) : !isSupported || !paypalReady ? (
                             <>
                               <Settings className="h-4 w-4" />
                               <span>Setup Required</span>
@@ -542,8 +542,8 @@ const Plans: React.FC = () => {
                             </div>
                           )}
 
-                          {isSupported && payComReady && user ? (
-                            <PayComButton
+                          {isSupported && paypalReady && user ? (
+                            <PayPalButton
                               planId={plan.id}
                               planName={plan.name}
                               price={plan.price}
@@ -556,7 +556,7 @@ const Plans: React.FC = () => {
                           ) : (
                             <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-4 py-3 rounded-lg flex items-center space-x-2">
                               <AlertCircle className="h-4 w-4" />
-                              <span>Pay.com setup required</span>
+                              <span>PayPal setup required</span>
                             </div>
                           )}
                           
@@ -581,7 +581,7 @@ const Plans: React.FC = () => {
                     <div className="mt-4 text-xs text-gray-500 text-center bg-black/20 rounded p-2">
                       Plan: {plan.id}
                       <br />
-                      Pay.com Support: {isSupported ? '✅' : '❌'}
+                      PayPal Support: {isSupported ? '✅' : '❌'}
                     </div>
                   )}
                 </div>
@@ -617,7 +617,7 @@ const Plans: React.FC = () => {
                 Secure Payments
               </h4>
               <p className="text-gray-300">
-                Pay.com integration with bank-level security and multiple payment methods
+                PayPal integration with buyer protection and multiple payment methods
               </p>
             </div>
 
