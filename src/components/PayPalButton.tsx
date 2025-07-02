@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { loadPayPalSDK, getPayPalPlanConfig } from '../services/paypal';
 import { updateUserPlan } from '../services/firestore';
-import { CreditCard, Loader, Shield, CheckCircle, AlertCircle, TestTube, Play } from 'lucide-react';
+import { CreditCard, Loader, Shield, CheckCircle, AlertCircle, TestTube, Play, Zap } from 'lucide-react';
 
 interface PayPalButtonProps {
   plan: any; // Full plan object from Firestore
@@ -146,12 +146,21 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   const handleVirtualTest = async () => {
     try {
       console.log('🧪 Starting virtual test purchase...');
+      console.log(`📋 Plan Details:`, {
+        id: plan.id,
+        name: plan.name,
+        price: plan.price,
+        recommendations_per_day: plan.recommendations_per_day
+      });
+      
       setLoading(true);
       
       // Simulate PayPal approval process
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       const mockSubscriptionId = `TEST_SUB_${Date.now()}`;
+      
+      console.log(`🔄 Updating user ${userId} to plan ${plan.id} with ${plan.recommendations_per_day} daily recommendations`);
       
       // Update user plan in Firestore
       await updateUserPlan(userId, plan.id, mockSubscriptionId);
@@ -269,7 +278,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
           </>
         ) : (
           <>
-            <Play className="h-4 w-4" />
+            <Zap className="h-4 w-4" />
             <span>🧪 Test Purchase (Virtual)</span>
           </>
         )}

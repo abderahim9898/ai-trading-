@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { updateUserPassword } from '../services/auth';
-import { updateDoc, doc, getDoc } from 'firebase/firestore';
+import { updateDoc, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { 
   testTelegramConfig, 
@@ -38,7 +38,8 @@ import {
   TestTube,
   ExternalLink,
   Info,
-  ChevronDown
+  ChevronDown,
+  RefreshCw
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
@@ -47,6 +48,9 @@ const Settings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
+
+  // Real-time user data
+  const [userProfile, setUserProfile] = useState<any>(null);
 
   // Profile settings
   const [displayName, setDisplayName] = useState('');
@@ -81,8 +85,29 @@ const Settings: React.FC = () => {
       setDisplayName(user.displayName || '');
       setEmail(user.email || '');
       loadUserSettings();
+      setupRealtimeListener();
     }
   }, [user]);
+
+  // Real-time listener for user data updates
+  const setupRealtimeListener = () => {
+    if (!user) return;
+
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), (doc) => {
+      if (doc.exists()) {
+        const userData = doc.data();
+        setUserProfile(userData);
+        console.log('📊 Real-time user data updated:', {
+          plan: userData.plan,
+          used_today: userData.used_today,
+          recommendation_limit: userData.recommendation_limit,
+          subscriptionId: userData.subscriptionId
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  };
 
   const loadUserSettings = async () => {
     if (!user) return;
@@ -91,6 +116,7 @@ const Settings: React.FC = () => {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       if (userDoc.exists()) {
         const userData = userDoc.data();
+        setUserProfile(userData);
         
         // Load notification settings
         if (userData.notifications) {
@@ -107,7 +133,7 @@ const Settings: React.FC = () => {
         }
         
         // Load Telegram settings (Elite only)
-        if (userData.telegram && user.plan === 'elite') {
+        if (userData.telegram && userData.plan === 'elite') {
           setTelegramBotToken(userData.telegram.botToken || '');
           setTelegramChatId(userData.telegram.chatId || '');
           setTelegramEnabled(userData.telegram.enabled ?? false);
@@ -275,18 +301,22 @@ const Settings: React.FC = () => {
   };
 
   const exportUserData = () => {
-    if (!user) return;
+    if (!user || !userProfile) return;
 
     const userData = {
       profile: {
         email: user.email,
         displayName: user.displayName,
-        plan: user.plan,
+        plan: userProfile.plan,
         createdAt: user.createdAt
       },
       usage: {
-        usedToday: user.used_today,
-        recommendationLimit: user.recommendation_limit
+        usedToday: userProfile.used_today,
+        recommendationLimit: userProfile.recommendation_limit
+      },
+      subscription: {
+        subscriptionId: userProfile.subscriptionId,
+        planUpdatedAt: userProfile.plan_updated_at
       },
       settings: {
         notifications: {
@@ -299,7 +329,7 @@ const Settings: React.FC = () => {
           dataSharing,
           analyticsTracking
         },
-        telegram: user.plan === 'elite' ? {
+        telegram: userProfile.plan === 'elite' ? {
           enabled: telegramEnabled,
           configured: !!(telegramBotToken && telegramChatId)
         } : null
@@ -333,7 +363,20 @@ const Settings: React.FC = () => {
     }
   };
 
+  const getPlanDisplayName = (plan: string) => {
+    switch (plan) {
+      case 'free': return 'Free Plan';
+      case 'pro': return 'Pro Plan';
+      case 'elite': return 'Elite Plan';
+      default: return 'Unknown Plan';
+    }
+  };
+
   if (!user) return null;
+
+  const currentPlan = userProfile?.plan || user.plan || 'free';
+  const currentUsage = userProfile?.used_today || 0;
+  const currentLimit = userProfile?.recommendation_limit || 1;
 
   const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -382,7 +425,7 @@ const Settings: React.FC = () => {
             <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 p-6">
               <div className="space-y-2">
                 {tabs.map((tab) => {
-                  const isEliteOnly = tab.eliteOnly && user.plan !== 'elite';
+                  const isEliteOnly = tab.eliteOnly && currentPlan !== 'elite';
                   return (
                     <button
                       key={tab.id}
@@ -455,9 +498,9 @@ const Settings: React.FC = () => {
                         <label className="block text-sm font-medium text-gray-300 mb-2">
                           Current Plan
                         </label>
-                        <div className={`flex items-center space-x-2 px-4 py-3 rounded-lg ${getPlanColor(user.plan)}`}>
-                          {getPlanIcon(user.plan)}
-                          <span className="font-semibold capitalize">{user.plan}</span>
+                        <div className={`flex items-center space-x-2 px-4 py-3 rounded-lg ${getPlanColor(currentPlan)}`}>
+                          {getPlanIcon(currentPlan)}
+                          <span className="font-semibold">{getPlanDisplayName(currentPlan)}</span>
                         </div>
                       </div>
 
@@ -468,7 +511,7 @@ const Settings: React.FC = () => {
                         <div className="flex items-center space-x-2 px-4 py-3 bg-white/10 rounded-lg">
                           <Activity className="h-5 w-5 text-green-400" />
                           <span className="text-white font-semibold">
-                            {user.used_today} / {user.recommendation_limit}
+                            {currentUsage} / {currentLimit}
                           </span>
                         </div>
                       </div>
@@ -660,7 +703,7 @@ const Settings: React.FC = () => {
                     </div>
                   </div>
 
-                  {user.plan !== 'elite' ? (
+                  {currentPlan !== 'elite' ? (
                     <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-8 text-center">
                       <Crown className="h-16 w-16 text-purple-400 mx-auto mb-4" />
                       <h3 className="text-xl font-semibold text-white mb-2">Elite Feature</h3>
@@ -890,23 +933,23 @@ const Settings: React.FC = () => {
                   
                   <div className="space-y-6">
                     <div className="bg-white/5 rounded-lg p-6">
-                      <div className="flex items-center justify-between mb-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-4 sm:space-y-0">
                         <div className="flex items-center space-x-3">
-                          <div className={`p-2 rounded-lg ${getPlanColor(user.plan)}`}>
-                            {getPlanIcon(user.plan)}
+                          <div className={`p-2 rounded-lg ${getPlanColor(currentPlan)}`}>
+                            {getPlanIcon(currentPlan)}
                           </div>
                           <div>
-                            <h3 className="text-xl font-semibold text-white capitalize">{user.plan} Plan</h3>
+                            <h3 className="text-xl font-semibold text-white">{getPlanDisplayName(currentPlan)}</h3>
                             <p className="text-gray-400">
-                              {user.plan === 'free' ? 'Free forever' : 'Active subscription'}
+                              {currentPlan === 'free' ? 'Free forever' : 'Active subscription'}
                             </p>
                           </div>
                         </div>
                         
-                        {user.plan !== 'elite' && (
+                        {currentPlan !== 'elite' && (
                           <a
                             href="/plans"
-                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all text-center"
                           >
                             Upgrade Plan
                           </a>
@@ -920,11 +963,11 @@ const Settings: React.FC = () => {
                             <div className="flex-1 bg-gray-700 rounded-full h-2">
                               <div
                                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                                style={{ width: `${(user.used_today / user.recommendation_limit) * 100}%` }}
+                                style={{ width: `${(currentUsage / currentLimit) * 100}%` }}
                               ></div>
                             </div>
                             <span className="text-white font-semibold text-sm">
-                              {user.used_today} / {user.recommendation_limit}
+                              {currentUsage} / {currentLimit}
                             </span>
                           </div>
                         </div>
@@ -939,18 +982,24 @@ const Settings: React.FC = () => {
                       </div>
                     </div>
 
-                    {user.subscriptionId && (
+                    {userProfile?.subscriptionId && (
                       <div className="bg-white/5 rounded-lg p-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Subscription Details</h3>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
                             <span className="text-gray-400">Subscription ID:</span>
-                            <span className="text-white font-mono">{user.subscriptionId}</span>
+                            <span className="text-white font-mono text-xs">{userProfile.subscriptionId}</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-400">Payment Method:</span>
                             <span className="text-white">PayPal</span>
                           </div>
+                          {userProfile.plan_updated_at && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Last Updated:</span>
+                              <span className="text-white">{new Date(userProfile.plan_updated_at.seconds * 1000).toLocaleDateString()}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
