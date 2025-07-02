@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getFeaturedSignals } from '../services/firestore';
 import { 
@@ -44,6 +45,8 @@ interface FeaturedSignal {
 
 const LandingPage: React.FC = () => {
   const { t, isRTL } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [featuredSignals, setFeaturedSignals] = useState<FeaturedSignal[]>([]);
   const [currentSignalIndex, setCurrentSignalIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -139,6 +142,17 @@ const LandingPage: React.FC = () => {
     }
   };
 
+  // Handle plan selection - redirect based on auth status
+  const handlePlanSelection = (planId: string) => {
+    if (user) {
+      // User is logged in, go to plans page
+      navigate('/plans');
+    } else {
+      // User not logged in, go to register with plan parameter
+      navigate(`/register?plan=${planId}`);
+    }
+  };
+
   const features = [
     {
       icon: <Zap className="h-8 w-8" />,
@@ -193,6 +207,7 @@ const LandingPage: React.FC = () => {
 
   const plans = [
     {
+      id: 'free',
       name: 'Free',
       price: '$0',
       originalPrice: null,
@@ -201,6 +216,7 @@ const LandingPage: React.FC = () => {
       badge: null
     },
     {
+      id: 'pro',
       name: 'Pro',
       price: '$19.99',
       originalPrice: '$29',
@@ -209,6 +225,7 @@ const LandingPage: React.FC = () => {
       badge: 'Most Popular'
     },
     {
+      id: 'elite',
       name: 'Elite',
       price: '$99',
       originalPrice: '$149',
@@ -247,13 +264,23 @@ const LandingPage: React.FC = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link
-                to="/register"
-                className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center space-x-2 shadow-2xl"
-              >
-                <span>{t('landing.hero.startTrial')}</span>
-                <ArrowRight className={`h-5 w-5 group-hover:translate-x-1 transition-transform ${isRTL ? 'rotate-180' : ''}`} />
-              </Link>
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center space-x-2 shadow-2xl"
+                >
+                  <span>Go to Dashboard</span>
+                  <ArrowRight className={`h-5 w-5 group-hover:translate-x-1 transition-transform ${isRTL ? 'rotate-180' : ''}`} />
+                </Link>
+              ) : (
+                <Link
+                  to="/register"
+                  className="group bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all transform hover:scale-105 flex items-center justify-center space-x-2 shadow-2xl"
+                >
+                  <span>{t('landing.hero.startTrial')}</span>
+                  <ArrowRight className={`h-5 w-5 group-hover:translate-x-1 transition-transform ${isRTL ? 'rotate-180' : ''}`} />
+                </Link>
+              )}
               <Link
                 to="/plans"
                 className="border-2 border-blue-500 text-blue-400 hover:bg-blue-500 hover:text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all flex items-center justify-center space-x-2"
@@ -545,16 +572,16 @@ const LandingPage: React.FC = () => {
                   ))}
                 </ul>
 
-                <Link
-                  to="/register"
+                <button
+                  onClick={() => handlePlanSelection(plan.id)}
                   className={`w-full py-4 px-6 rounded-xl font-semibold transition-all text-center block ${
                     plan.popular
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg'
                       : 'bg-white/10 hover:bg-white/20 text-white border border-white/30'
                   }`}
                 >
-                  {t('landing.pricing.getStarted')}
-                </Link>
+                  {user ? 'Upgrade Plan' : t('landing.pricing.getStarted')}
+                </button>
               </div>
             ))}
           </div>
@@ -594,13 +621,23 @@ const LandingPage: React.FC = () => {
               {t('landing.cta.subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/register"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all transform hover:scale-105 inline-flex items-center justify-center space-x-2"
-              >
-                <span>{t('landing.cta.startTrial')}</span>
-                <ArrowRight className={`h-5 w-5 ${isRTL ? 'rotate-180' : ''}`} />
-              </Link>
+              {user ? (
+                <Link
+                  to="/dashboard"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all transform hover:scale-105 inline-flex items-center justify-center space-x-2"
+                >
+                  <span>Go to Dashboard</span>
+                  <ArrowRight className={`h-5 w-5 ${isRTL ? 'rotate-180' : ''}`} />
+                </Link>
+              ) : (
+                <Link
+                  to="/register"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl text-lg font-semibold transition-all transform hover:scale-105 inline-flex items-center justify-center space-x-2"
+                >
+                  <span>{t('landing.cta.startTrial')}</span>
+                  <ArrowRight className={`h-5 w-5 ${isRTL ? 'rotate-180' : ''}`} />
+                </Link>
+              )}
               <Link
                 to="/plans"
                 className="border-2 border-white/30 text-white hover:bg-white/10 px-8 py-4 rounded-xl text-lg font-semibold transition-all"
