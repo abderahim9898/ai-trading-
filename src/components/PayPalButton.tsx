@@ -30,6 +30,12 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
     initializePayPal();
   }, []);
 
+  useEffect(() => {
+  if (sdkLoaded && paypalRef.current && !buttonsRendered.current) {
+    renderPayPalButtons();
+  }
+}, [sdkLoaded]);
+
   const initializePayPal = async () => {
     try {
       console.log(`🔄 Initializing PayPal for ${plan.name} (${plan.id})...`);
@@ -58,6 +64,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
     } finally {
       setLoading(false);
     }
+    
   };
 
   const renderPayPalButtons = () => {
