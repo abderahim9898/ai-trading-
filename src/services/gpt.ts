@@ -204,13 +204,28 @@ export const generateTradingSignalWithRealData = async ({
   marketData,
   schoolPrompt,
   provider = 'openrouter'
-}: TradingAnalysisRequest): Promise<{ analysis: string; signal: any }> => {
+}: TradingAnalysisRequest): Promise<{ analysis: string; signal: any; usedProvider?: AIProvider }> => {
   try {
     const prompt = createTradingPrompt(schoolPrompt, symbol, marketData);
     
     let analysis: string;
+    let usedProvider = provider;
+    
     if (provider === 'gemini') {
-      analysis = await callGeminiAPI(prompt);
+      try {
+        analysis = await callGeminiAPI(prompt);
+      } catch (error: any) {
+        console.warn('Gemini API failed, falling back to OpenRouter:', error.message);
+        
+        // Check if it's a quota/rate limit error
+        if (error.message.includes('429') || error.message.includes('quota') || error.message.includes('rate limit')) {
+          console.log('Quota exceeded for Gemini, automatically switching to OpenRouter');
+          analysis = await callOpenRouterAPI(prompt);
+          usedProvider = 'openrouter';
+        } else {
+          throw error; // Re-throw if it's not a quota issue
+        }
+      }
     } else {
       analysis = await callOpenRouterAPI(prompt);
     }
@@ -218,7 +233,7 @@ export const generateTradingSignalWithRealData = async ({
     // Extract structured signal data
     const signal = extractSignalData(analysis, symbol);
     
-    return { analysis, signal };
+    return { analysis, signal, usedProvider };
   } catch (error) {
     console.error('Error generating trading signal:', error);
     throw new Error(`Failed to generate trading signal: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -227,7 +242,7 @@ export const generateTradingSignalWithRealData = async ({
 
 const callOpenRouterAPI = async (prompt: string): Promise<string> => {
   if (!OPENROUTER_API_KEY) {
-    throw new Error('OpenRouter API key is not configured');
+    throw new Error('OpenRouter API key is not configured. Please check your environment variables.');
   }
   
   try {
@@ -273,7 +288,7 @@ const callOpenRouterAPI = async (prompt: string): Promise<string> => {
 
 const callGeminiAPI = async (prompt: string): Promise<string> => {
   if (!GEMINI_API_KEY) {
-    throw new Error('Gemini API key is not configured');
+    throw new Error('Gemini API key is not configured. Please check your environment variables.');
   }
   
   try {
@@ -297,7 +312,16 @@ const callGeminiAPI = async (prompt: string): Promise<string> => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(`Gemini API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
+      const errorMessage = errorData.error?.message || JSON.stringify(errorData);
+      
+      // Enhanced error handling for specific Gemini API errors
+      if (response.status === 429) {
+        throw new Error(`Gemini API quota exceeded (429): ${errorMessage}. Please check your Google Cloud Console for quota limits and billing details.`);
+      } else if (response.status === 403) {
+        throw new Error(`Gemini API access forbidden (403): ${errorMessage}. Please verify your API key and permissions.`);
+      } else {
+        throw new Error(`Gemini API error (${response.status}): ${errorMessage}`);
+      }
     }
 
     const data = await response.json();

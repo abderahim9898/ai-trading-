@@ -347,6 +347,12 @@ ${jsonData}`;
       console.log('Signal generation result:', result);
       console.log('Analysis length:', result.analysis.length);
       console.log('Signal data:', result.signal);
+      console.log('Used provider:', result.usedProvider);
+
+      // Show a notification if we had to fallback to a different provider
+      if (result.usedProvider && result.usedProvider !== aiProvider) {
+        setError(`Note: Switched to ${result.usedProvider === 'openrouter' ? 'OpenRouter (GPT-4)' : 'Gemini'} due to quota limits on the selected provider.`);
+      }
 
       // Save recommendation with structured signal data
       // This will automatically increment user usage
@@ -377,7 +383,19 @@ ${jsonData}`;
       }, 500);
     } catch (error: any) {
       console.error('Error generating signal:', error);
-      setError(error.message || 'Failed to generate signal');
+      
+      // Enhanced error handling for specific API issues
+      let errorMessage = error.message || 'Failed to generate signal';
+      
+      if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+        errorMessage = 'API quota exceeded. Please try switching to a different AI provider in Advanced Settings, or try again later.';
+      } else if (errorMessage.includes('API key')) {
+        errorMessage = 'API configuration issue. Please check your API keys in the environment settings.';
+      } else if (errorMessage.includes('403')) {
+        errorMessage = 'API access denied. Please verify your API key permissions.';
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
