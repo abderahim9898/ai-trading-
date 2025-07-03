@@ -10,6 +10,7 @@ import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Plans from './pages/Plans';
+import About from './pages/About';
 
 // Legal pages
 import PrivacyPolicy from './pages/PrivacyPolicy';
@@ -39,6 +40,7 @@ function App() {
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="plans" element={<Plans />} />
+            <Route path="about" element={<About />} />
             <Route path="setup" element={<FirestoreSetup />} />
             <Route path="make-admin" element={<AdminMaker />} />
             

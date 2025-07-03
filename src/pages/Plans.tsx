@@ -399,36 +399,6 @@ const Plans: React.FC = () => {
           </div>
         )}
 
-        {/* PayPal Status Banner */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <div className={`flex items-center space-x-2 px-4 py-2 rounded-lg border text-sm ${
-            paypalReady 
-              ? 'bg-green-500/10 border-green-500/20 text-green-400'
-              : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
-          }`}>
-            {paypalReady ? (
-              <>
-                <CheckCircle className="h-4 w-4" />
-                <span className="font-medium">PayPal Payment System Ready</span>
-                <span className="text-xs">• Secure payments enabled</span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-4 w-4" />
-                <span className="font-medium">PayPal Configuration Required</span>
-                {user?.isAdmin && (
-                  <button
-                    onClick={initializePayPal}
-                    className="ml-auto text-xs hover:underline"
-                  >
-                    Retry Setup
-                  </button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
         {/* Pricing Cards */}
         <div className="grid lg:grid-cols-3 gap-8 mb-20">
           {plans.map((plan, index) => {

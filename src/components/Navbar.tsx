@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
 import { logoutUser } from '../services/auth';
-import { TrendingUp, User, Settings, LogOut, Shield, BarChart3, Menu, X } from 'lucide-react';
+import { TrendingUp, User, Settings, LogOut, Shield, BarChart3, Menu, X, DollarSign, Info } from 'lucide-react';
 import LanguageSelector from './LanguageSelector';
 
 const Navbar: React.FC = () => {
@@ -43,6 +43,23 @@ const Navbar: React.FC = () => {
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Public Navigation Links */}
+            <Link
+              to="/plans"
+              className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-white/10 transition-colors flex items-center space-x-1"
+            >
+              <DollarSign className="h-4 w-4" />
+              <span>Pricing</span>
+            </Link>
+            
+            <Link
+              to="/about"
+              className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-white/10 transition-colors flex items-center space-x-1"
+            >
+              <Info className="h-4 w-4" />
+              <span>About</span>
+            </Link>
+
             {user ? (
               <>
                 <Link
@@ -142,6 +159,23 @@ const Navbar: React.FC = () => {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-white/20 py-4">
             <div className="space-y-2">
+              {/* Public Links */}
+              <Link
+                to="/plans"
+                className="block text-gray-300 hover:text-white px-3 py-2 rounded-md text-base font-medium hover:bg-white/10 transition-colors"
+                onClick={closeMobileMenu}
+              >
+                Pricing
+              </Link>
+              
+              <Link
+                to="/about"
+                className="block text-gray-300 hover:text-white px-3 py-2 rounded-md text-base font-medium hover:bg-white/10 transition-colors"
+                onClick={closeMobileMenu}
+              >
+                About
+              </Link>
+
               {user ? (
                 <>
                   {/* User Info */}
