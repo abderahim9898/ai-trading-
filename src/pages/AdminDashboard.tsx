@@ -67,6 +67,13 @@ const AdminDashboard: React.FC = () => {
   const [editingPlan, setEditingPlan] = useState<string | null>(null);
   const [editingSchool, setEditingSchool] = useState<string | null>(null);
   const [editingSignal, setEditingSignal] = useState<string | null>(null);
+  
+  // Form states for editing
+  const [editUserData, setEditUserData] = useState<any>({});
+  const [editPlanData, setEditPlanData] = useState<any>({});
+  const [editSchoolData, setEditSchoolData] = useState<any>({});
+  const [editSignalData, setEditSignalData] = useState<any>({});
+  
   const [newPlan, setNewPlan] = useState<Partial<Plan>>({
     name: '',
     price: 0,
@@ -124,6 +131,111 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // User editing functions
+  const handleEditUser = (userId: string) => {
+    const userToEdit = users.find(u => u.uid === userId);
+    if (userToEdit) {
+      setEditingUser(userId);
+      setEditUserData({
+        plan: getUserPlanType(userToEdit.plan),
+        used_today: userToEdit.used_today,
+        recommendation_limit: userToEdit.recommendation_limit
+      });
+    }
+  };
+
+  const handleSaveUser = async (userId: string) => {
+    try {
+      await updateUserPlanAdmin(userId, editUserData.plan);
+      await updateUserUsage(userId, editUserData.used_today, editUserData.recommendation_limit);
+      setEditingUser(null);
+      setEditUserData({});
+      await loadAllData();
+    } catch (error) {
+      console.error('Error updating user:', error);
+    }
+  };
+
+  const handleCancelEditUser = () => {
+    setEditingUser(null);
+    setEditUserData({});
+  };
+
+  // Plan editing functions
+  const handleEditPlan = (planId: string) => {
+    const planToEdit = plans.find(p => p.id === planId);
+    if (planToEdit) {
+      setEditingPlan(planId);
+      setEditPlanData({ ...planToEdit });
+    }
+  };
+
+  const handleSavePlan = async (planId: string) => {
+    try {
+      await updatePlan(planId, editPlanData);
+      setEditingPlan(null);
+      setEditPlanData({});
+      await loadAllData();
+    } catch (error) {
+      console.error('Error updating plan:', error);
+    }
+  };
+
+  const handleCancelEditPlan = () => {
+    setEditingPlan(null);
+    setEditPlanData({});
+  };
+
+  // School editing functions
+  const handleEditSchool = (schoolId: string) => {
+    const schoolToEdit = schools.find(s => s.id === schoolId);
+    if (schoolToEdit) {
+      setEditingSchool(schoolId);
+      setEditSchoolData({ ...schoolToEdit });
+    }
+  };
+
+  const handleSaveSchool = async (schoolId: string) => {
+    try {
+      await updateSchool(schoolId, editSchoolData);
+      setEditingSchool(null);
+      setEditSchoolData({});
+      await loadAllData();
+    } catch (error) {
+      console.error('Error updating school:', error);
+    }
+  };
+
+  const handleCancelEditSchool = () => {
+    setEditingSchool(null);
+    setEditSchoolData({});
+  };
+
+  // Signal editing functions
+  const handleEditSignal = (signalId: string) => {
+    const signalToEdit = featuredSignals.find(s => s.id === signalId);
+    if (signalToEdit) {
+      setEditingSignal(signalId);
+      setEditSignalData({ ...signalToEdit });
+    }
+  };
+
+  const handleSaveSignal = async (signalId: string) => {
+    try {
+      await updateFeaturedSignal(signalId, editSignalData);
+      setEditingSignal(null);
+      setEditSignalData({});
+      await loadAllData();
+    } catch (error) {
+      console.error('Error updating signal:', error);
+    }
+  };
+
+  const handleCancelEditSignal = () => {
+    setEditingSignal(null);
+    setEditSignalData({});
+  };
+
   const handleUpdateUserPlan = async (userId: string, planId: string) => {
     try {
       await updateUserPlanAdmin(userId, planId);
@@ -178,16 +290,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleUpdatePlan = async (planId: string, updates: Partial<Plan>) => {
-    try {
-      await updatePlan(planId, updates);
-      setEditingPlan(null);
-      await loadAllData();
-    } catch (error) {
-      console.error('Error updating plan:', error);
-    }
-  };
-
   const handleDeletePlan = async (planId: string) => {
     if (!confirm('Are you sure you want to delete this plan?')) return;
     
@@ -216,16 +318,6 @@ const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error creating school:', error);
       alert('Error creating school: ' + (error as Error).message);
-    }
-  };
-
-  const handleUpdateSchool = async (schoolId: string, updates: Partial<School>) => {
-    try {
-      await updateSchool(schoolId, updates);
-      setEditingSchool(null);
-      await loadAllData();
-    } catch (error) {
-      console.error('Error updating school:', error);
     }
   };
 
@@ -265,16 +357,6 @@ const AdminDashboard: React.FC = () => {
       await loadAllData();
     } catch (error) {
       console.error('Error creating signal:', error);
-    }
-  };
-
-  const handleUpdateSignal = async (signalId: string, updates: any) => {
-    try {
-      await updateFeaturedSignal(signalId, updates);
-      setEditingSignal(null);
-      await loadAllData();
-    } catch (error) {
-      console.error('Error updating signal:', error);
     }
   };
 
@@ -533,54 +615,89 @@ const AdminDashboard: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {users.map((user) => (
-                        <tr key={user.uid} className="border-b border-white/10">
+                      {users.map((userItem) => (
+                        <tr key={userItem.uid} className="border-b border-white/10">
                           <td className="py-3">
                             <div>
-                              <p className="text-white font-medium">{user.displayName || 'No name'}</p>
-                              <p className="text-gray-400 text-xs">{user.email}</p>
+                              <p className="text-white font-medium">{userItem.displayName || 'No name'}</p>
+                              <p className="text-gray-400 text-xs">{userItem.email}</p>
                             </div>
                           </td>
                           <td className="py-3">
-                            {editingUser === user.uid ? (
+                            {editingUser === userItem.uid ? (
                               <select
-                                value={getUserPlanType(user.plan)}
-                                onChange={(e) => handleUpdateUserPlan(user.uid, e.target.value)}
+                                value={editUserData.plan || getUserPlanType(userItem.plan)}
+                                onChange={(e) => setEditUserData({...editUserData, plan: e.target.value})}
                                 className="bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs"
                               >
-                                {plans.map((plan) => (
-                                  <option key={plan.id} value={plan.id} className="bg-gray-800">
-                                    {plan.name}
-                                  </option>
-                                ))}
+                                <option value="free" className="bg-gray-800">Free</option>
+                                <option value="pro" className="bg-gray-800">Pro</option>
+                                <option value="elite" className="bg-gray-800">Elite</option>
                               </select>
                             ) : (
-                              <div className={`px-2 py-1 rounded text-xs font-medium ${getPlanColor(getUserPlanType(user.plan))} flex items-center space-x-1`}>
-                                {getPlanIcon(getUserPlanType(user.plan))}
-                                <span>{getUserPlanType(user.plan)}</span>
+                              <div className={`px-2 py-1 rounded text-xs font-medium ${getPlanColor(getUserPlanType(userItem.plan))} flex items-center space-x-1`}>
+                                {getPlanIcon(getUserPlanType(userItem.plan))}
+                                <span>{getUserPlanType(userItem.plan)}</span>
                               </div>
                             )}
                           </td>
                           <td className="py-3">
-                            <div className="text-xs">
-                              <span className="text-white">{user.used_today}</span>
-                              <span className="text-gray-400"> / {user.recommendation_limit}</span>
-                            </div>
+                            {editingUser === userItem.uid ? (
+                              <div className="flex space-x-2">
+                                <input
+                                  type="number"
+                                  value={editUserData.used_today || userItem.used_today}
+                                  onChange={(e) => setEditUserData({...editUserData, used_today: Number(e.target.value)})}
+                                  className="w-16 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs"
+                                />
+                                <span className="text-gray-400 text-xs">/</span>
+                                <input
+                                  type="number"
+                                  value={editUserData.recommendation_limit || userItem.recommendation_limit}
+                                  onChange={(e) => setEditUserData({...editUserData, recommendation_limit: Number(e.target.value)})}
+                                  className="w-16 bg-white/10 border border-white/20 rounded px-2 py-1 text-white text-xs"
+                                />
+                              </div>
+                            ) : (
+                              <div className="text-xs">
+                                <span className="text-white">{userItem.used_today}</span>
+                                <span className="text-gray-400"> / {userItem.recommendation_limit}</span>
+                              </div>
+                            )}
                           </td>
                           <td className="py-3">
                             <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => setEditingUser(editingUser === user.uid ? null : user.uid)}
-                                className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
-                              >
-                                <SquarePen className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteUser(user.uid)}
-                                className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                              {editingUser === userItem.uid ? (
+                                <>
+                                  <button
+                                    onClick={() => handleSaveUser(userItem.uid)}
+                                    className="p-2 rounded bg-green-600 hover:bg-green-700 text-white"
+                                  >
+                                    <Save className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={handleCancelEditUser}
+                                    className="p-2 rounded bg-gray-600 hover:bg-gray-700 text-white"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleEditUser(userItem.uid)}
+                                    className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteUser(userItem.uid)}
+                                    className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -650,29 +767,78 @@ const AdminDashboard: React.FC = () => {
                 <div className="space-y-4">
                   {plans.map((plan) => (
                     <div key={plan.id} className="bg-black/20 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          {getPlanIcon(plan.id)}
-                          <div>
-                            <h4 className="text-white font-semibold">{plan.name}</h4>
-                            <p className="text-gray-400 text-sm">${plan.price}/month • {plan.recommendations_per_day} signals/day</p>
+                      {editingPlan === plan.id ? (
+                        <div className="space-y-4">
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <input
+                              type="text"
+                              value={editPlanData.name || ''}
+                              onChange={(e) => setEditPlanData({...editPlanData, name: e.target.value})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="Plan Name"
+                            />
+                            <input
+                              type="number"
+                              value={editPlanData.price || 0}
+                              onChange={(e) => setEditPlanData({...editPlanData, price: Number(e.target.value)})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="Price"
+                            />
+                            <input
+                              type="number"
+                              value={editPlanData.recommendations_per_day || 1}
+                              onChange={(e) => setEditPlanData({...editPlanData, recommendations_per_day: Number(e.target.value)})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="Recommendations per day"
+                            />
+                            <input
+                              type="text"
+                              value={editPlanData.paypal_plan_id || ''}
+                              onChange={(e) => setEditPlanData({...editPlanData, paypal_plan_id: e.target.value})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="PayPal Plan ID"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleSavePlan(plan.id)}
+                              className="p-2 rounded bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Save className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEditPlan}
+                              className="p-2 rounded bg-gray-600 hover:bg-gray-700 text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => setEditingPlan(editingPlan === plan.id ? null : plan.id)}
-                            className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
-                          >
-                            <SquarePen className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeletePlan(plan.id)}
-                            className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            {getPlanIcon(plan.id)}
+                            <div>
+                              <h4 className="text-white font-semibold">{plan.name}</h4>
+                              <p className="text-gray-400 text-sm">${plan.price}/month • {plan.recommendations_per_day} signals/day</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleEditPlan(plan.id)}
+                              className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePlan(plan.id)}
+                              className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -724,32 +890,67 @@ const AdminDashboard: React.FC = () => {
                 <div className="space-y-4">
                   {schools.map((school) => (
                     <div key={school.id} className="bg-black/20 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-3">
-                          <BookOpen className="h-5 w-5 text-blue-400" />
-                          <div>
-                            <h4 className="text-white font-semibold">{school.name}</h4>
-                            <p className="text-gray-400 text-sm">
-                              {school.active ? 'Active' : 'Inactive'}
-                            </p>
+                      {editingSchool === school.id ? (
+                        <div className="space-y-4">
+                          <input
+                            type="text"
+                            value={editSchoolData.name || ''}
+                            onChange={(e) => setEditSchoolData({...editSchoolData, name: e.target.value})}
+                            className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                            placeholder="School Name"
+                          />
+                          <textarea
+                            value={editSchoolData.prompt || ''}
+                            onChange={(e) => setEditSchoolData({...editSchoolData, prompt: e.target.value})}
+                            rows={4}
+                            className="w-full bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                            placeholder="Trading Prompt"
+                          />
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleSaveSchool(school.id)}
+                              className="p-2 rounded bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Save className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEditSchool}
+                              className="p-2 rounded bg-gray-600 hover:bg-gray-700 text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => setEditingSchool(editingSchool === school.id ? null : school.id)}
-                            className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
-                          >
-                            <SquarePen className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSchool(school.id)}
-                            className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                      ) : (
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-3">
+                            <BookOpen className="h-5 w-5 text-blue-400" />
+                            <div>
+                              <h4 className="text-white font-semibold">{school.name}</h4>
+                              <p className="text-gray-400 text-sm">
+                                {school.active ? 'Active' : 'Inactive'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleEditSchool(school.id)}
+                              className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSchool(school.id)}
+                              className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                      <p className="text-gray-300 text-sm">{school.prompt.substring(0, 200)}...</p>
+                      )}
+                      {editingSchool !== school.id && (
+                        <p className="text-gray-300 text-sm">{school.prompt.substring(0, 200)}...</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -848,53 +1049,123 @@ const AdminDashboard: React.FC = () => {
                 <div className="space-y-4">
                   {featuredSignals.map((signal) => (
                     <div key={signal.id} className="bg-black/20 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-3">
-                          <div className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center space-x-1 ${getSignalTypeColor(signal.type)}`}>
-                            {getSignalTypeIcon(signal.type)}
-                            <span>{signal.type.toUpperCase()}</span>
+                      {editingSignal === signal.id ? (
+                        <div className="space-y-4">
+                          <div className="grid md:grid-cols-3 gap-4">
+                            <input
+                              type="text"
+                              value={editSignalData.pair || ''}
+                              onChange={(e) => setEditSignalData({...editSignalData, pair: e.target.value})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="Trading Pair"
+                            />
+                            <select
+                              value={editSignalData.type || 'buy'}
+                              onChange={(e) => setEditSignalData({...editSignalData, type: e.target.value})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                            >
+                              <option value="buy" className="bg-gray-800">Buy</option>
+                              <option value="sell" className="bg-gray-800">Sell</option>
+                              <option value="hold" className="bg-gray-800">Hold</option>
+                            </select>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editSignalData.entry || 0}
+                              onChange={(e) => setEditSignalData({...editSignalData, entry: Number(e.target.value)})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="Entry Price"
+                            />
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editSignalData.stopLoss || 0}
+                              onChange={(e) => setEditSignalData({...editSignalData, stopLoss: Number(e.target.value)})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="Stop Loss"
+                            />
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={editSignalData.takeProfit1 || 0}
+                              onChange={(e) => setEditSignalData({...editSignalData, takeProfit1: Number(e.target.value)})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="Take Profit 1"
+                            />
+                            <input
+                              type="number"
+                              value={editSignalData.probability || 85}
+                              onChange={(e) => setEditSignalData({...editSignalData, probability: Number(e.target.value)})}
+                              className="bg-white/10 border border-white/20 rounded px-3 py-2 text-white"
+                              placeholder="Probability %"
+                            />
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleSaveSignal(signal.id)}
+                              className="p-2 rounded bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Save className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={handleCancelEditSignal}
+                              className="p-2 rounded bg-gray-600 hover:bg-gray-700 text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-3">
+                            <div className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center space-x-1 ${getSignalTypeColor(signal.type)}`}>
+                              {getSignalTypeIcon(signal.type)}
+                              <span>{signal.type.toUpperCase()}</span>
+                            </div>
+                            <div>
+                              <h4 className="text-white font-semibold">{signal.pair}</h4>
+                              <p className="text-gray-400 text-sm">{signal.school} • {signal.date}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">
+                              +{signal.profitPips} pips
+                            </div>
+                            <button
+                              onClick={() => handleEditSignal(signal.id)}
+                              className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSignal(signal.id)}
+                              className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {editingSignal !== signal.id && (
+                        <div className="grid grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-400">Entry: </span>
+                            <span className="text-white">{signal.entry}</span>
                           </div>
                           <div>
-                            <h4 className="text-white font-semibold">{signal.pair}</h4>
-                            <p className="text-gray-400 text-sm">{signal.school} • {signal.date}</p>
+                            <span className="text-gray-400">SL: </span>
+                            <span className="text-red-400">{signal.stopLoss}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">TP: </span>
+                            <span className="text-green-400">{signal.takeProfit1}</span>
+                          </div>
+                          <div>
+                            <span className="text-gray-400">Probability: </span>
+                            <span className="text-blue-400">{signal.probability}%</span>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">
-                            +{signal.profitPips} pips
-                          </div>
-                          <button
-                            onClick={() => setEditingSignal(editingSignal === signal.id ? null : signal.id)}
-                            className="p-2 rounded bg-blue-600 hover:bg-blue-700 text-white"
-                          >
-                            <SquarePen className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSignal(signal.id)}
-                            className="p-2 rounded bg-red-600 hover:bg-red-700 text-white"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-400">Entry: </span>
-                          <span className="text-white">{signal.entry}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">SL: </span>
-                          <span className="text-red-400">{signal.stopLoss}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">TP: </span>
-                          <span className="text-green-400">{signal.takeProfit1}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400">Probability: </span>
-                          <span className="text-blue-400">{signal.probability}%</span>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
