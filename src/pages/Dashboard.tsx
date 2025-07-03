@@ -312,6 +312,8 @@ ${jsonData}`;
         provider: aiProvider
       });
 
+      console.log('Signal generation result:', result);
+
       // Save recommendation with structured signal data
       // This will automatically increment user usage
       await saveRecommendation({
