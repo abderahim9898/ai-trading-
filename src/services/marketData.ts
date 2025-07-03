@@ -483,6 +483,12 @@ export const testApiConnection = async (): Promise<boolean> => {
     await loadApiKeys();
   }
   
+  // If no API keys are available, return false immediately
+  if (apiKeys.length === 0 || (apiKeys.length === 1 && (apiKeys[0] === 'your_api_key' || !apiKeys[0]))) {
+    console.error('❌ No valid TwelveData API keys configured');
+    return false;
+  }
+  
   let success = false;
   let attempts = 0;
   

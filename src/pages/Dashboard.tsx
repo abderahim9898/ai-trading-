@@ -120,9 +120,12 @@ const Dashboard: React.FC = () => {
 
   const checkApiConnection = async () => {
     try {
+      console.log('Checking API connection...');
       const isConnected = await testApiConnection();
+      console.log('API connection status:', isConnected ? 'connected' : 'error');
       setApiStatus(isConnected ? 'connected' : 'error');
     } catch (error) {
+      console.error('Error checking API connection:', error);
       setApiStatus('error');
     }
   };
@@ -328,6 +331,11 @@ ${jsonData}`;
       
       setLastRecommendation(result.analysis);
       setLastSignal(result.signal);
+      
+      console.log('Analysis saved successfully:', {
+        analysis: result.analysis.substring(0, 100) + '...',
+        signal: result.signal
+      });
     } catch (error: any) {
       console.error('Error generating signal:', error);
       setError(error.message || 'Failed to generate signal');
