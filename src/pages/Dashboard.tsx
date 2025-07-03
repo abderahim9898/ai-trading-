@@ -60,6 +60,7 @@ const Dashboard: React.FC = () => {
     used_today: 0,
     recommendation_limit: 1
   });
+  const analysisRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadSchools();
@@ -367,6 +368,13 @@ ${jsonData}`;
         analysis: result.analysis.substring(0, 100) + '...',
         signal: result.signal
       });
+
+      // Scroll to analysis section after it's rendered
+      setTimeout(() => {
+        if (analysisRef.current) {
+          analysisRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 500);
     } catch (error: any) {
       console.error('Error generating signal:', error);
       setError(error.message || 'Failed to generate signal');
@@ -819,7 +827,11 @@ ${jsonData}`;
 
         {/* Analysis Display */}
         {(lastRecommendation || lastSignal) && (
-          <div className="mt-8">
+          <div className="mt-8" ref={analysisRef}>
+            <h2 className="text-2xl font-bold text-white mb-4 flex items-center space-x-2">
+              <BarChart3 className="h-6 w-6 text-blue-400" />
+              <span>Analysis Results</span>
+            </h2>
             <AnalysisDisplay
               analysis={lastRecommendation}
               signal={lastSignal}
