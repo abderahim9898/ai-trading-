@@ -89,10 +89,13 @@ const Dashboard: React.FC = () => {
 
   const loadSchools = async () => {
     try {
+      console.log('Loading trading schools...');
       const schoolsData = await getSchools();
+      console.log('Schools loaded:', schoolsData.length);
       setSchools(schoolsData);
       if (schoolsData.length > 0 && !selectedSchool) {
         setSelectedSchool(schoolsData[0].id);
+        console.log('Selected default school:', schoolsData[0].id);
       }
     } catch (error) {
       console.error('Error loading schools:', error);
@@ -111,6 +114,7 @@ const Dashboard: React.FC = () => {
             botToken: userData.telegram.botToken,
             chatId: userData.telegram.chatId
           });
+          console.log('Telegram configuration loaded successfully');
         }
       }
     } catch (error) {
@@ -137,6 +141,16 @@ const Dashboard: React.FC = () => {
     try {
       console.log(`Fetching market data for ${selectedPair}...`);
       const data = await fetchMultiTimeframeData(selectedPair, candleCount);
+      console.log('Market data fetched successfully:', {
+        symbol: data.symbol,
+        timeframes: {
+          '5min': data.timeframes['5min']?.length,
+          '15min': data.timeframes['15min']?.length,
+          '1h': data.timeframes['1h']?.length,
+          '4h': data.timeframes['4h']?.length
+        }
+      });
+      
       setMarketData(data);
       setError('');
       setApiStatus('connected');
@@ -287,14 +301,23 @@ ${jsonData}`;
     if (!user || !selectedSchool) return;
 
     // Check if user can generate recommendation
-    const canGenerate = await canUserGenerateRecommendation(user.uid);
-    if (!canGenerate) {
-      setError(t('signal.dailyLimitReached'));
+    try {
+      console.log('Checking if user can generate recommendation...');
+      const canGenerate = await canUserGenerateRecommendation(user.uid);
+      if (!canGenerate) {
+        setError(t('signal.dailyLimitReached'));
+        return;
+      }
+      console.log('User can generate recommendation: Yes');
+    } catch (error) {
+      console.error('Error checking recommendation limit:', error);
+      setError('Error checking recommendation limit');
       return;
     }
 
     // Fetch fresh market data if not available
     if (!marketData) {
+      console.log('No market data available, fetching now...');
       await fetchMarketData();
       return;
     }
@@ -304,9 +327,14 @@ ${jsonData}`;
 
     try {
       const school = schools.find(s => s.id === selectedSchool);
-      if (!school) throw new Error('Selected school not found');
+      if (!school) {
+        throw new Error('Selected school not found');
+      }
 
       console.log('Generating signal with market data...');
+      console.log('Selected school:', school.name);
+      console.log('Selected pair:', selectedPair);
+      console.log('AI Provider:', aiProvider);
       
       const result = await generateTradingSignalWithRealData({
         symbol: selectedPair,
@@ -316,6 +344,8 @@ ${jsonData}`;
       });
 
       console.log('Signal generation result:', result);
+      console.log('Analysis length:', result.analysis.length);
+      console.log('Signal data:', result.signal);
 
       // Save recommendation with structured signal data
       // This will automatically increment user usage
@@ -329,6 +359,7 @@ ${jsonData}`;
         signal: result.signal
       });
       
+      // Update state with the results
       setLastRecommendation(result.analysis);
       setLastSignal(result.signal);
       
