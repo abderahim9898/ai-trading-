@@ -101,7 +101,7 @@ export const getCurrentApiKey = (): string => {
   return apiKeys[currentApiKeyIndex];
 };
 
-// Rotate to the next API key
+// Rotate to the next API key - now used proactively, not just on errors
 export const rotateApiKey = (): string => {
   if (apiKeys.length <= 1) {
     return getCurrentApiKey();
@@ -178,7 +178,7 @@ const validateApiParams = (symbol: string) => {
   return true;
 };
 
-// Fetch candlestick data with automatic API key rotation on failure
+// Fetch candlestick data with sequential API key rotation
 export const fetchCandlestickData = async (
   symbol: string, 
   interval: string, 
@@ -190,144 +190,125 @@ export const fetchCandlestickData = async (
     await loadApiKeys();
   }
   
-  let retries = 0;
-  let lastError: any = null;
+  // Validate parameters
+  validateApiParams(symbol);
   
-  while (retries < maxRetries && retries < apiKeys.length) {
-    try {
-      // Validate parameters
-      validateApiParams(symbol);
-      
-      // Get the correct API symbol format
-      const apiSymbol = getApiSymbol(symbol);
-      const currentKey = getCurrentApiKey();
-      
-      // Build URL with proper encoding
-      const params = new URLSearchParams({
-        symbol: apiSymbol,
-        interval: interval,
-        outputsize: count.toString(),
-        apikey: currentKey,
-        format: 'json'
-      });
-      
-      const url = `https://api.twelvedata.com/time_series?${params.toString()}`;
-      
-      console.log(`🔄 Fetching ${interval} data for ${apiSymbol} (${symbol}) with API key ${currentApiKeyIndex + 1}/${apiKeys.length}...`);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'AI-Trading-Platform/1.0'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  // Get the correct API symbol format
+  const apiSymbol = getApiSymbol(symbol);
+  
+  // Rotate API key for each new request - sequential rotation
+  const currentKey = rotateApiKey();
+  
+  console.log(`🔄 Fetching ${interval} data for ${apiSymbol} (${symbol}) with API key ${currentApiKeyIndex + 1}/${apiKeys.length}...`);
+  
+  try {
+    // Build URL with proper encoding
+    const params = new URLSearchParams({
+      symbol: apiSymbol,
+      interval: interval,
+      outputsize: count.toString(),
+      apikey: currentKey,
+      format: 'json'
+    });
+    
+    const url = `https://api.twelvedata.com/time_series?${params.toString()}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'AI-Trading-Platform/1.0'
       }
-      
-      const data = await response.json();
-      
-      // Handle API errors
-      if (data.status === 'error') {
-        throw new Error(data.message || 'API returned error status');
-      }
-      
-      if (data.code) {
-        if (data.code === 400) {
-          throw new Error(`Invalid symbol or parameters: ${data.message}`);
-        } else if (data.code === 401) {
-          throw new Error('Invalid API key. Rotating to next key.');
-        } else if (data.code === 429) {
-          throw new Error('API rate limit exceeded. Rotating to next key.');
-        } else {
-          throw new Error(`API Error ${data.code}: ${data.message}`);
-        }
-      }
-      
-      // Check for rate limiting message
-      if (data.message && data.message.includes('API calls quota')) {
-        throw new Error('API rate limit exceeded. Rotating to next key.');
-      }
-      
-      // Validate data structure
-      if (!data.values || !Array.isArray(data.values)) {
-        // Sometimes the API returns different structure for different symbols
-        if (data.price) {
-          // Single price point - convert to candle format
-          const now = new Date().toISOString();
-          return [{
-            datetime: now,
-            open: parseFloat(data.price),
-            high: parseFloat(data.price),
-            low: parseFloat(data.price),
-            close: parseFloat(data.price),
-            volume: 1000
-          }];
-        }
-        
-        throw new Error(`No candlestick data available for ${apiSymbol}. This symbol might not support the ${interval} timeframe.`);
-      }
-      
-      if (data.values.length === 0) {
-        throw new Error(`No historical data available for ${apiSymbol} on ${interval} timeframe`);
-      }
-      
-      // Process and validate candle data
-      const processedCandles = data.values.reverse().map((candle: any, index: number) => {
-        try {
-          const processed = {
-            datetime: candle.datetime,
-            open: parseFloat(candle.open),
-            high: parseFloat(candle.high),
-            low: parseFloat(candle.low),
-            close: parseFloat(candle.close),
-            volume: candle.volume ? parseFloat(candle.volume) : Math.floor(Math.random() * 10000) + 1000
-          };
-          
-          // Validate numbers
-          if (isNaN(processed.open) || isNaN(processed.high) || isNaN(processed.low) || isNaN(processed.close)) {
-            throw new Error(`Invalid price data`);
-          }
-          
-          return processed;
-        } catch (error) {
-          throw new Error(`Invalid candle data at index ${index} for ${apiSymbol}: ${error}`);
-        }
-      });
-      
-      console.log(`✅ Successfully fetched ${processedCandles.length} ${interval} candles for ${apiSymbol}`);
-      return processedCandles;
-      
-    } catch (error: any) {
-      lastError = error;
-      console.warn(`⚠️ Error with API key ${currentApiKeyIndex + 1}/${apiKeys.length}: ${error.message}`);
-      
-      // Check if error is related to API key or rate limiting
-      const errorMsg = error.message.toLowerCase();
-      if (
-        errorMsg.includes('api key') || 
-        errorMsg.includes('rate limit') || 
-        errorMsg.includes('quota') ||
-        errorMsg.includes('unauthorized') ||
-        errorMsg.includes('401') ||
-        errorMsg.includes('429')
-      ) {
-        // Rotate to next API key
-        rotateApiKey();
-        retries++;
-        console.log(`🔄 Trying next API key (${retries}/${maxRetries})...`);
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Handle API errors
+    if (data.status === 'error') {
+      throw new Error(data.message || 'API returned error status');
+    }
+    
+    if (data.code) {
+      if (data.code === 400) {
+        throw new Error(`Invalid symbol or parameters: ${data.message}`);
+      } else if (data.code === 401) {
+        throw new Error('Invalid API key');
+      } else if (data.code === 429) {
+        throw new Error('API rate limit exceeded');
       } else {
-        // Other error, don't retry
-        break;
+        throw new Error(`API Error ${data.code}: ${data.message}`);
       }
     }
+    
+    // Check for rate limiting message
+    if (data.message && data.message.includes('API calls quota')) {
+      throw new Error('API rate limit exceeded');
+    }
+    
+    // Validate data structure
+    if (!data.values || !Array.isArray(data.values)) {
+      // Sometimes the API returns different structure for different symbols
+      if (data.price) {
+        // Single price point - convert to candle format
+        const now = new Date().toISOString();
+        return [{
+          datetime: now,
+          open: parseFloat(data.price),
+          high: parseFloat(data.price),
+          low: parseFloat(data.price),
+          close: parseFloat(data.price),
+          volume: 1000
+        }];
+      }
+      
+      throw new Error(`No candlestick data available for ${apiSymbol}. This symbol might not support the ${interval} timeframe.`);
+    }
+    
+    if (data.values.length === 0) {
+      throw new Error(`No historical data available for ${apiSymbol} on ${interval} timeframe`);
+    }
+    
+    // Process and validate candle data
+    const processedCandles = data.values.reverse().map((candle: any, index: number) => {
+      try {
+        const processed = {
+          datetime: candle.datetime,
+          open: parseFloat(candle.open),
+          high: parseFloat(candle.high),
+          low: parseFloat(candle.low),
+          close: parseFloat(candle.close),
+          volume: candle.volume ? parseFloat(candle.volume) : Math.floor(Math.random() * 10000) + 1000
+        };
+        
+        // Validate numbers
+        if (isNaN(processed.open) || isNaN(processed.high) || isNaN(processed.low) || isNaN(processed.close)) {
+          throw new Error(`Invalid price data`);
+        }
+        
+        return processed;
+      } catch (error) {
+        throw new Error(`Invalid candle data at index ${index} for ${apiSymbol}: ${error}`);
+      }
+    });
+    
+    console.log(`✅ Successfully fetched ${processedCandles.length} ${interval} candles for ${apiSymbol}`);
+    return processedCandles;
+    
+  } catch (error: any) {
+    console.error(`❌ Error fetching data with API key ${currentApiKeyIndex + 1}/${apiKeys.length}: ${error.message}`);
+    
+    // If we have more API keys and retries left, try with the next key
+    if (apiKeys.length > 1 && maxRetries > 0) {
+      console.log(`🔄 Retrying with next API key (${maxRetries} retries left)...`);
+      return fetchCandlestickData(symbol, interval, count, maxRetries - 1);
+    }
+    
+    throw error;
   }
-  
-  // All retries failed or non-API key related error
-  console.error(`❌ All API keys failed or error not related to API key: ${lastError?.message}`);
-  throw lastError || new Error('Failed to fetch candlestick data after multiple attempts');
 };
 
 export const fetchMultiTimeframeData = async (
@@ -483,7 +464,7 @@ export const testApiConnection = async (): Promise<boolean> => {
     await loadApiKeys();
   }
   
-  // If no API keys are available, return false immediately
+  // If no valid API keys are available, return false immediately
   if (apiKeys.length === 0 || (apiKeys.length === 1 && (apiKeys[0] === 'your_api_key' || !apiKeys[0]))) {
     console.error('❌ No valid TwelveData API keys configured');
     return false;

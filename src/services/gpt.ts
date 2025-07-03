@@ -230,38 +230,45 @@ const callOpenRouterAPI = async (prompt: string): Promise<string> => {
     throw new Error('OpenRouter API key is not configured');
   }
   
-  const response = await fetch(OPENROUTER_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'AI Trading Signals'
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert trading analyst. Provide clear, actionable trading recommendations based on the candlestick data provided. Include confidence level, signal type (buy/sell/hold), and reasoning.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.1
-    })
-  });
+  try {
+    console.log('Calling OpenRouter API...');
+    const response = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'AI Trading Signals'
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-4o',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert trading analyst. Provide clear, actionable trading recommendations based on the candlestick data provided. Include confidence level, signal type (buy/sell/hold), and reasoning.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.1
+      })
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(`OpenRouter API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`OpenRouter API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    console.log('OpenRouter API response received successfully');
+    return data.choices[0]?.message?.content || 'No recommendation generated';
+  } catch (error) {
+    console.error('Error calling OpenRouter API:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data.choices[0]?.message?.content || 'No recommendation generated';
 };
 
 const callGeminiAPI = async (prompt: string): Promise<string> => {
@@ -269,30 +276,37 @@ const callGeminiAPI = async (prompt: string): Promise<string> => {
     throw new Error('Gemini API key is not configured');
   }
   
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { 
-        temperature: 0, 
-        topK: 1, 
-        maxOutputTokens: 4096 
-      }
-    })
-  });
+  try {
+    console.log('Calling Gemini API...');
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { 
+          temperature: 0, 
+          topK: 1, 
+          maxOutputTokens: 4096 
+        }
+      })
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(`Gemini API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Gemini API error (${response.status}): ${errorData.error?.message || JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json();
+    console.log('Gemini API response received successfully');
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No recommendation generated';
+  } catch (error) {
+    console.error('Error calling Gemini API:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No recommendation generated';
 };
 
 // Legacy function for backward compatibility
