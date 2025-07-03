@@ -416,6 +416,33 @@ export const deleteSchool = async (schoolId: string) => {
   await deleteDoc(doc(db, 'schools', schoolId));
 };
 
+// SEO Settings
+export const getSEOSettings = async () => {
+  try {
+    const seoDoc = await getDoc(doc(db, 'settings', 'seo'));
+    if (seoDoc.exists()) {
+      return seoDoc.data();
+    }
+    return {};
+  } catch (error) {
+    console.error('Error getting SEO settings:', error);
+    return {};
+  }
+};
+
+export const updateSEOSettings = async (settings: any) => {
+  try {
+    await setDoc(doc(db, 'settings', 'seo'), {
+      ...settings,
+      lastUpdated: serverTimestamp()
+    });
+    return true;
+  } catch (error) {
+    console.error('Error updating SEO settings:', error);
+    throw error;
+  }
+};
+
 // Admin operations
 export const getAllUsers = async () => {
   const snapshot = await getDocs(collection(db, 'users'));

@@ -4,6 +4,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import LiveChat from './components/LiveChat';
+import SEOHead from './components/SEOHead';
 
 // Public pages
 import LandingPage from './pages/LandingPage';
@@ -33,6 +34,7 @@ function App() {
   return (
     <LanguageProvider>
       <Router>
+        <SEOHead />
         <Routes>
           <Route path="/" element={<Layout />}>
             {/* Public routes */}
