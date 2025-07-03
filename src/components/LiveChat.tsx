@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { MessageCircle, X, Send, User, ChevronDown, ChevronUp, Minimize2, Maximize2 } from 'lucide-react';
 import { collection, addDoc, query, where, orderBy, onSnapshot, serverTimestamp, doc, getDoc, getDocs } from 'firebase/firestore';
