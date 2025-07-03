@@ -23,6 +23,7 @@ import { User, Plan, School, Recommendation } from '../types';
 import DailyResetManager from '../components/DailyResetManager';
 import ChatAdmin from '../components/ChatAdmin';
 import SEOManager from '../components/SEOManager';
+import ApiKeyManager from '../components/ApiKeyManager';
 import { 
   Shield, 
   Users, 
@@ -52,7 +53,9 @@ import {
   MessageCircle,
   SquarePen,
   Search,
-  Globe
+  Globe,
+  Key,
+  Database
 } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
@@ -388,6 +391,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'plans', label: 'Plans', icon: Crown },
     { id: 'schools', label: 'Schools', icon: BookOpen },
     { id: 'signals', label: 'Featured Signals', icon: Star },
+    { id: 'api-keys', label: 'API Keys', icon: Key },
     { id: 'seo', label: 'SEO Management', icon: Search },
     { id: 'chat', label: 'Live Chat', icon: MessageCircle },
     { id: 'reset', label: 'Daily Reset', icon: Clock }
@@ -902,6 +906,15 @@ const AdminDashboard: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'api-keys' && (
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-semibold text-white">Market Data API Keys</h3>
+                </div>
+                <ApiKeyManager />
               </div>
             )}
 

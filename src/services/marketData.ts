@@ -1,5 +1,12 @@
 // Enhanced market data service with better error handling and API connection
-const TWELVE_DATA_API_KEY = import.meta.env.VITE_TWELVE_DATA_API_KEY || "6a49114a1cf942fe994ac33328d6c2c8";
+import { getSetting, updateSetting } from './firestore';
+
+// API key management
+let currentApiKeyIndex = 0;
+let apiKeys: string[] = [];
+
+// Initialize with the default key
+const DEFAULT_API_KEY = import.meta.env.VITE_TWELVE_DATA_API_KEY || "6a49114a1cf942fe994ac33328d6c2c8";
 
 export interface CandleData {
   datetime: string;
@@ -58,10 +65,110 @@ const getApiSymbol = (symbol: string): string => {
   return SYMBOL_MAPPING[symbol.toUpperCase()] || symbol;
 };
 
+// Load API keys from Firestore
+export const loadApiKeys = async (): Promise<string[]> => {
+  try {
+    const apiSettings = await getSetting('marketData');
+    if (apiSettings && apiSettings.apiKeys && Array.isArray(apiSettings.apiKeys)) {
+      apiKeys = apiSettings.apiKeys.filter(key => key && key.trim() !== '');
+      
+      // Always ensure the default key is included if not already present
+      if (DEFAULT_API_KEY && !apiKeys.includes(DEFAULT_API_KEY)) {
+        apiKeys.unshift(DEFAULT_API_KEY);
+      }
+      
+      console.log(`✅ Loaded ${apiKeys.length} API keys for market data`);
+    } else {
+      // If no keys in Firestore, use the default key
+      apiKeys = [DEFAULT_API_KEY];
+      console.log('ℹ️ Using default API key for market data');
+    }
+    
+    return apiKeys;
+  } catch (error) {
+    console.error('❌ Error loading API keys:', error);
+    // Fallback to default key
+    apiKeys = [DEFAULT_API_KEY];
+    return apiKeys;
+  }
+};
+
+// Get the current API key
+export const getCurrentApiKey = (): string => {
+  if (apiKeys.length === 0) {
+    return DEFAULT_API_KEY;
+  }
+  return apiKeys[currentApiKeyIndex];
+};
+
+// Rotate to the next API key
+export const rotateApiKey = (): string => {
+  if (apiKeys.length <= 1) {
+    return getCurrentApiKey();
+  }
+  
+  currentApiKeyIndex = (currentApiKeyIndex + 1) % apiKeys.length;
+  const newKey = getCurrentApiKey();
+  console.log(`🔄 Rotating to API key ${currentApiKeyIndex + 1}/${apiKeys.length}`);
+  return newKey;
+};
+
+// Add a new API key
+export const addApiKey = async (newKey: string): Promise<boolean> => {
+  if (!newKey || newKey.trim() === '') {
+    return false;
+  }
+  
+  // Don't add duplicates
+  if (apiKeys.includes(newKey)) {
+    return false;
+  }
+  
+  try {
+    // Add to local array
+    apiKeys.push(newKey);
+    
+    // Save to Firestore
+    await updateSetting('marketData', { apiKeys });
+    
+    console.log(`✅ Added new API key. Total keys: ${apiKeys.length}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error adding API key:', error);
+    return false;
+  }
+};
+
+// Remove an API key
+export const removeApiKey = async (keyToRemove: string): Promise<boolean> => {
+  if (!keyToRemove || apiKeys.length <= 1) {
+    return false;
+  }
+  
+  try {
+    // Remove from local array
+    apiKeys = apiKeys.filter(key => key !== keyToRemove);
+    
+    // Reset index if needed
+    if (currentApiKeyIndex >= apiKeys.length) {
+      currentApiKeyIndex = 0;
+    }
+    
+    // Save to Firestore
+    await updateSetting('marketData', { apiKeys });
+    
+    console.log(`✅ Removed API key. Total keys: ${apiKeys.length}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error removing API key:', error);
+    return false;
+  }
+};
+
 // Validate API key and symbol
 const validateApiParams = (symbol: string) => {
-  if (!TWELVE_DATA_API_KEY || TWELVE_DATA_API_KEY === 'your_api_key') {
-    throw new Error('TwelveData API key is not configured');
+  if (apiKeys.length === 0) {
+    throw new Error('No TwelveData API keys configured');
   }
   
   if (!symbol || symbol.trim() === '') {
@@ -71,120 +178,156 @@ const validateApiParams = (symbol: string) => {
   return true;
 };
 
+// Fetch candlestick data with automatic API key rotation on failure
 export const fetchCandlestickData = async (
   symbol: string, 
   interval: string, 
-  count: number
+  count: number,
+  maxRetries: number = 3
 ): Promise<CandleData[]> => {
-  try {
-    // Validate parameters
-    validateApiParams(symbol);
-    
-    // Get the correct API symbol format
-    const apiSymbol = getApiSymbol(symbol);
-    
-    // Build URL with proper encoding
-    const params = new URLSearchParams({
-      symbol: apiSymbol,
-      interval: interval,
-      outputsize: count.toString(),
-      apikey: TWELVE_DATA_API_KEY,
-      format: 'json'
-    });
-    
-    const url = `https://api.twelvedata.com/time_series?${params.toString()}`;
-    
-    console.log(`🔄 Fetching ${interval} data for ${apiSymbol} (${symbol})...`);
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'AI-Trading-Platform/1.0'
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    
-    // Handle API errors
-    if (data.status === 'error') {
-      throw new Error(data.message || 'API returned error status');
-    }
-    
-    if (data.code) {
-      if (data.code === 400) {
-        throw new Error(`Invalid symbol or parameters: ${data.message}`);
-      } else if (data.code === 401) {
-        throw new Error('Invalid API key. Please check your TwelveData API key.');
-      } else if (data.code === 429) {
-        throw new Error('API rate limit exceeded. Please wait before making more requests.');
-      } else {
-        throw new Error(`API Error ${data.code}: ${data.message}`);
-      }
-    }
-    
-    // Check for rate limiting message
-    if (data.message && data.message.includes('API calls quota')) {
-      throw new Error('API rate limit exceeded. Please upgrade your TwelveData plan or wait for quota reset.');
-    }
-    
-    // Validate data structure
-    if (!data.values || !Array.isArray(data.values)) {
-      // Sometimes the API returns different structure for different symbols
-      if (data.price) {
-        // Single price point - convert to candle format
-        const now = new Date().toISOString();
-        return [{
-          datetime: now,
-          open: parseFloat(data.price),
-          high: parseFloat(data.price),
-          low: parseFloat(data.price),
-          close: parseFloat(data.price),
-          volume: 1000
-        }];
+  // Load API keys if not already loaded
+  if (apiKeys.length === 0) {
+    await loadApiKeys();
+  }
+  
+  let retries = 0;
+  let lastError: any = null;
+  
+  while (retries < maxRetries && retries < apiKeys.length) {
+    try {
+      // Validate parameters
+      validateApiParams(symbol);
+      
+      // Get the correct API symbol format
+      const apiSymbol = getApiSymbol(symbol);
+      const currentKey = getCurrentApiKey();
+      
+      // Build URL with proper encoding
+      const params = new URLSearchParams({
+        symbol: apiSymbol,
+        interval: interval,
+        outputsize: count.toString(),
+        apikey: currentKey,
+        format: 'json'
+      });
+      
+      const url = `https://api.twelvedata.com/time_series?${params.toString()}`;
+      
+      console.log(`🔄 Fetching ${interval} data for ${apiSymbol} (${symbol}) with API key ${currentApiKeyIndex + 1}/${apiKeys.length}...`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'AI-Trading-Platform/1.0'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
-      throw new Error(`No candlestick data available for ${apiSymbol}. This symbol might not support the ${interval} timeframe.`);
-    }
-    
-    if (data.values.length === 0) {
-      throw new Error(`No historical data available for ${apiSymbol} on ${interval} timeframe`);
-    }
-    
-    // Process and validate candle data
-    const processedCandles = data.values.reverse().map((candle: any, index: number) => {
-      try {
-        const processed = {
-          datetime: candle.datetime,
-          open: parseFloat(candle.open),
-          high: parseFloat(candle.high),
-          low: parseFloat(candle.low),
-          close: parseFloat(candle.close),
-          volume: candle.volume ? parseFloat(candle.volume) : Math.floor(Math.random() * 10000) + 1000
-        };
-        
-        // Validate numbers
-        if (isNaN(processed.open) || isNaN(processed.high) || isNaN(processed.low) || isNaN(processed.close)) {
-          throw new Error(`Invalid price data`);
+      const data = await response.json();
+      
+      // Handle API errors
+      if (data.status === 'error') {
+        throw new Error(data.message || 'API returned error status');
+      }
+      
+      if (data.code) {
+        if (data.code === 400) {
+          throw new Error(`Invalid symbol or parameters: ${data.message}`);
+        } else if (data.code === 401) {
+          throw new Error('Invalid API key. Rotating to next key.');
+        } else if (data.code === 429) {
+          throw new Error('API rate limit exceeded. Rotating to next key.');
+        } else {
+          throw new Error(`API Error ${data.code}: ${data.message}`);
+        }
+      }
+      
+      // Check for rate limiting message
+      if (data.message && data.message.includes('API calls quota')) {
+        throw new Error('API rate limit exceeded. Rotating to next key.');
+      }
+      
+      // Validate data structure
+      if (!data.values || !Array.isArray(data.values)) {
+        // Sometimes the API returns different structure for different symbols
+        if (data.price) {
+          // Single price point - convert to candle format
+          const now = new Date().toISOString();
+          return [{
+            datetime: now,
+            open: parseFloat(data.price),
+            high: parseFloat(data.price),
+            low: parseFloat(data.price),
+            close: parseFloat(data.price),
+            volume: 1000
+          }];
         }
         
-        return processed;
-      } catch (error) {
-        throw new Error(`Invalid candle data at index ${index} for ${apiSymbol}: ${error}`);
+        throw new Error(`No candlestick data available for ${apiSymbol}. This symbol might not support the ${interval} timeframe.`);
       }
-    });
-    
-    console.log(`✅ Successfully fetched ${processedCandles.length} ${interval} candles for ${apiSymbol}`);
-    return processedCandles;
-    
-  } catch (error) {
-    console.error(`❌ Error fetching ${interval} data for ${symbol}:`, error);
-    throw error;
+      
+      if (data.values.length === 0) {
+        throw new Error(`No historical data available for ${apiSymbol} on ${interval} timeframe`);
+      }
+      
+      // Process and validate candle data
+      const processedCandles = data.values.reverse().map((candle: any, index: number) => {
+        try {
+          const processed = {
+            datetime: candle.datetime,
+            open: parseFloat(candle.open),
+            high: parseFloat(candle.high),
+            low: parseFloat(candle.low),
+            close: parseFloat(candle.close),
+            volume: candle.volume ? parseFloat(candle.volume) : Math.floor(Math.random() * 10000) + 1000
+          };
+          
+          // Validate numbers
+          if (isNaN(processed.open) || isNaN(processed.high) || isNaN(processed.low) || isNaN(processed.close)) {
+            throw new Error(`Invalid price data`);
+          }
+          
+          return processed;
+        } catch (error) {
+          throw new Error(`Invalid candle data at index ${index} for ${apiSymbol}: ${error}`);
+        }
+      });
+      
+      console.log(`✅ Successfully fetched ${processedCandles.length} ${interval} candles for ${apiSymbol}`);
+      return processedCandles;
+      
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`⚠️ Error with API key ${currentApiKeyIndex + 1}/${apiKeys.length}: ${error.message}`);
+      
+      // Check if error is related to API key or rate limiting
+      const errorMsg = error.message.toLowerCase();
+      if (
+        errorMsg.includes('api key') || 
+        errorMsg.includes('rate limit') || 
+        errorMsg.includes('quota') ||
+        errorMsg.includes('unauthorized') ||
+        errorMsg.includes('401') ||
+        errorMsg.includes('429')
+      ) {
+        // Rotate to next API key
+        rotateApiKey();
+        retries++;
+        console.log(`🔄 Trying next API key (${retries}/${maxRetries})...`);
+      } else {
+        // Other error, don't retry
+        break;
+      }
+    }
   }
+  
+  // All retries failed or non-API key related error
+  console.error(`❌ All API keys failed or error not related to API key: ${lastError?.message}`);
+  throw lastError || new Error('Failed to fetch candlestick data after multiple attempts');
 };
 
 export const fetchMultiTimeframeData = async (
@@ -192,6 +335,11 @@ export const fetchMultiTimeframeData = async (
   candleCount: number = 50
 ): Promise<MultiTimeframeData> => {
   try {
+    // Load API keys if not already loaded
+    if (apiKeys.length === 0) {
+      await loadApiKeys();
+    }
+    
     validateApiParams(symbol);
     
     const cleanSymbol = symbol.trim().toUpperCase();
@@ -330,63 +478,97 @@ export const generateMockMultiTimeframeData = (symbol: string): MultiTimeframeDa
 
 // Test API connection with better error handling
 export const testApiConnection = async (): Promise<boolean> => {
-  try {
-    if (!TWELVE_DATA_API_KEY || TWELVE_DATA_API_KEY === 'your_api_key') {
-      console.error('❌ TwelveData API key not configured');
-      return false;
-    }
-    
-    // Test with a simple, reliable symbol
-    const params = new URLSearchParams({
-      symbol: 'EUR/USD',
-      interval: '1h',
-      outputsize: '1',
-      apikey: TWELVE_DATA_API_KEY,
-      format: 'json'
-    });
-    
-    const url = `https://api.twelvedata.com/time_series?${params.toString()}`;
-    
-    console.log('🔍 Testing TwelveData API connection...');
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'AI-Trading-Platform/1.0'
-      }
-    });
-    
-    if (!response.ok) {
-      console.error(`❌ API Test Failed: HTTP ${response.status}`);
-      return false;
-    }
-    
-    const data = await response.json();
-    
-    if (data.status === 'error' || data.code) {
-      console.error('❌ API Test Failed:', data.message || `Error code: ${data.code}`);
-      return false;
-    }
-    
-    if (!data.values && !data.price) {
-      console.error('❌ API Test Failed: No data returned');
-      return false;
-    }
-    
-    console.log('✅ TwelveData API connection successful');
-    return true;
-    
-  } catch (error) {
-    console.error('❌ API Test Failed:', error);
-    return false;
+  // Load API keys if not already loaded
+  if (apiKeys.length === 0) {
+    await loadApiKeys();
   }
+  
+  let success = false;
+  let attempts = 0;
+  
+  // Try each API key until one works
+  while (!success && attempts < apiKeys.length) {
+    const currentKey = getCurrentApiKey();
+    
+    try {
+      if (!currentKey || currentKey === 'your_api_key') {
+        console.error('❌ TwelveData API key not configured');
+        rotateApiKey();
+        attempts++;
+        continue;
+      }
+      
+      // Test with a simple, reliable symbol
+      const params = new URLSearchParams({
+        symbol: 'EUR/USD',
+        interval: '1h',
+        outputsize: '1',
+        apikey: currentKey,
+        format: 'json'
+      });
+      
+      const url = `https://api.twelvedata.com/time_series?${params.toString()}`;
+      
+      console.log(`🔍 Testing TwelveData API connection with key ${currentApiKeyIndex + 1}/${apiKeys.length}...`);
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'AI-Trading-Platform/1.0'
+        }
+      });
+      
+      if (!response.ok) {
+        console.error(`❌ API Test Failed: HTTP ${response.status}`);
+        rotateApiKey();
+        attempts++;
+        continue;
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === 'error' || data.code) {
+        console.error('❌ API Test Failed:', data.message || `Error code: ${data.code}`);
+        rotateApiKey();
+        attempts++;
+        continue;
+      }
+      
+      if (!data.values && !data.price) {
+        console.error('❌ API Test Failed: No data returned');
+        rotateApiKey();
+        attempts++;
+        continue;
+      }
+      
+      console.log(`✅ TwelveData API connection successful with key ${currentApiKeyIndex + 1}`);
+      success = true;
+      
+    } catch (error) {
+      console.error(`❌ API Test Failed with key ${currentApiKeyIndex + 1}:`, error);
+      rotateApiKey();
+      attempts++;
+    }
+  }
+  
+  if (!success) {
+    console.error(`❌ All API keys failed the connection test`);
+  }
+  
+  return success;
 };
 
 // Get API usage info (if available)
 export const getApiUsage = async (): Promise<any> => {
+  // Load API keys if not already loaded
+  if (apiKeys.length === 0) {
+    await loadApiKeys();
+  }
+  
   try {
-    const response = await fetch(`https://api.twelvedata.com/usage?apikey=${TWELVE_DATA_API_KEY}`);
+    const currentKey = getCurrentApiKey();
+    const response = await fetch(`https://api.twelvedata.com/usage?apikey=${currentKey}`);
     if (response.ok) {
       return await response.json();
     }
@@ -395,3 +577,78 @@ export const getApiUsage = async (): Promise<any> => {
   }
   return null;
 };
+
+// Get all API keys and their status
+export const getApiKeyStatus = async (): Promise<{
+  keys: { key: string; status: 'active' | 'error' | 'unknown'; usage?: any }[];
+  activeKey: number;
+  totalKeys: number;
+}> => {
+  // Load API keys if not already loaded
+  if (apiKeys.length === 0) {
+    await loadApiKeys();
+  }
+  
+  const keyStatus = [];
+  
+  for (let i = 0; i < apiKeys.length; i++) {
+    const key = apiKeys[i];
+    let status: 'active' | 'error' | 'unknown' = 'unknown';
+    let usage = null;
+    
+    try {
+      // Test key with a simple request
+      const params = new URLSearchParams({
+        symbol: 'EUR/USD',
+        interval: '1h',
+        outputsize: '1',
+        apikey: key,
+        format: 'json'
+      });
+      
+      const url = `https://api.twelvedata.com/time_series?${params.toString()}`;
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (!data.status && !data.code && (data.values || data.price)) {
+          status = 'active';
+          
+          // Try to get usage info
+          try {
+            const usageResponse = await fetch(`https://api.twelvedata.com/usage?apikey=${key}`);
+            if (usageResponse.ok) {
+              usage = await usageResponse.json();
+            }
+          } catch (e) {
+            // Ignore usage fetch errors
+          }
+        } else {
+          status = 'error';
+        }
+      } else {
+        status = 'error';
+      }
+    } catch (error) {
+      status = 'error';
+    }
+    
+    // Mask the API key for security
+    const maskedKey = key.substring(0, 4) + '...' + key.substring(key.length - 4);
+    
+    keyStatus.push({
+      key: maskedKey,
+      status,
+      usage
+    });
+  }
+  
+  return {
+    keys: keyStatus,
+    activeKey: currentApiKeyIndex,
+    totalKeys: apiKeys.length
+  };
+};
+
+// Initialize by loading API keys
+loadApiKeys();

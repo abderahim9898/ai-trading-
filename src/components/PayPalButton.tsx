@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { loadPayPalSDK, getPayPalPlanConfig } from '../services/paypal';
 import { updateUserPlan } from '../services/firestore';
-import { CreditCard, Loader, Shield, CheckCircle, AlertCircle, TestTube, Play, Zap } from 'lucide-react';
+import { CreditCard, Loader, Shield, CheckCircle, AlertCircle, Play, Zap } from 'lucide-react';
 
 interface PayPalButtonProps {
   plan: any; // Full plan object from Firestore
@@ -23,7 +23,6 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
   const [loading, setLoading] = useState(true);
   const [sdkLoaded, setSdkLoaded] = useState(false);
   const [setupRequired, setSetupRequired] = useState(false);
-  const [testMode, setTestMode] = useState(true); // Enable test mode for virtual testing
   const paypalRef = useRef<HTMLDivElement>(null);
   const buttonsRendered = useRef(false);
 
@@ -90,8 +89,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
         console.log('🎯 Creating PayPal subscription for:', {
           planId: planConfig.id,
           userEmail,
-          amount: `$${plan.price}`,
-          testMode
+          amount: `$${plan.price}`
         });
 
         return actions.subscription.create({
@@ -122,8 +120,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
             planId: plan.id,
             planName: plan.name,
             amount: plan.price,
-            status: 'approved',
-            testMode
+            status: 'approved'
           });
           
         } catch (error: any) {
@@ -250,21 +247,6 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Test Mode Banner */}
-      {testMode && (
-        <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4">
-          <div className="flex items-start space-x-2">
-            <TestTube className="h-4 w-4 text-purple-400 mt-0.5 flex-shrink-0" />
-            <div className="text-xs text-purple-300">
-              <p className="font-medium mb-1">🧪 Virtual Testing Mode</p>
-              <p>You can test the purchase flow without real payment processing.</p>
-              <p className="mt-2">Plan: {plan.name} - ${plan.price}/month</p>
-              <p>Features: {plan.recommendations_per_day} signals per day</p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Virtual Test Button */}
       <button
         onClick={handleVirtualTest}
@@ -279,7 +261,7 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
         ) : (
           <>
             <Zap className="h-4 w-4" />
-            <span>🧪 Test Purchase (Virtual)</span>
+            <span>Test Purchase (Virtual)</span>
           </>
         )}
       </button>
@@ -293,7 +275,6 @@ const PayPalButton: React.FC<PayPalButtonProps> = ({
             <p>• Buyer protection and secure checkout</p>
             <p>• Multiple payment methods supported</p>
             <p>• Cancel anytime from your dashboard</p>
-            <p>• Test mode: No real charges will be made</p>
           </div>
         </div>
       </div>

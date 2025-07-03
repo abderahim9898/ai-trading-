@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getSchools, saveRecommendation, canUserGenerateRecommendation } from '../services/firestore';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { generateTradingSignalWithRealData } from '../services/gpt';
-import { fetchMultiTimeframeData, generateMockMultiTimeframeData, TRADING_PAIRS, testApiConnection } from '../services/marketData';
+import { fetchMultiTimeframeData, generateMockMultiTimeframeData, TRADING_PAIRS, testApiConnection, loadApiKeys } from '../services/marketData';
 import { sendTelegramMessage, formatSignalForTelegram } from '../services/telegram';
 import { db } from '../config/firebase';
 import { School } from '../types';
@@ -34,7 +34,8 @@ import {
   Check,
   FileText,
   Shield,
-  Users
+  Users,
+  Database
 } from 'lucide-react';
 
 const Dashboard: React.FC = () => {
@@ -63,6 +64,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     loadSchools();
     checkApiConnection();
+    loadApiKeys(); // Load API keys on component mount
     if (user?.plan === 'elite') {
       loadTelegramConfig();
     }

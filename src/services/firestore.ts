@@ -332,8 +332,13 @@ export const promoteToFeaturedSignal = async (recommendation: Recommendation, si
 
 // Plans - Enhanced with proper document naming
 export const getPlans = async () => {
-  const snapshot = await getDocs(collection(db, 'plans'));
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Plan[];
+  try {
+    const snapshot = await getDocs(collection(db, 'plans'));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Plan[];
+  } catch (error) {
+    console.error('Error fetching plans:', error);
+    throw error;
+  }
 };
 
 // Create plan with plan name as document ID (instead of random ID)
@@ -439,6 +444,33 @@ export const updateSEOSettings = async (settings: any) => {
     return true;
   } catch (error) {
     console.error('Error updating SEO settings:', error);
+    throw error;
+  }
+};
+
+// General settings management
+export const getSetting = async (settingId: string) => {
+  try {
+    const settingDoc = await getDoc(doc(db, 'settings', settingId));
+    if (settingDoc.exists()) {
+      return settingDoc.data();
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error getting setting ${settingId}:`, error);
+    return null;
+  }
+};
+
+export const updateSetting = async (settingId: string, data: any) => {
+  try {
+    await setDoc(doc(db, 'settings', settingId), {
+      ...data,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error(`Error updating setting ${settingId}:`, error);
     throw error;
   }
 };
